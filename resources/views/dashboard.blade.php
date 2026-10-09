@@ -30,7 +30,7 @@
             <div class="grid grid-cols-2 gap-3 px-4 sm:grid-cols-3 sm:px-0 lg:grid-cols-5 lg:gap-4">
                 @foreach ($tiles as [$label, $value, $hint, $href, $warn])
                     @php($tag = $href ? 'a' : 'div')
-                    <{{ $tag }} @if ($href) href="{{ $href }}" @endif @class(['block rounded-lg bg-white p-4 shadow-sm transition', 'hover:shadow-md' => $href])>
+                    <{{ $tag }} @if ($href) href="{{ $href }}" @endif @class(['block min-w-0 rounded-lg bg-white p-4 shadow-sm transition', 'hover:shadow-md' => $href, 'col-span-2 sm:col-span-1' => $loop->last])>
                         <div class="text-sm text-gray-500">{{ $label }}</div>
                         <div @class(['mt-1 text-2xl font-semibold tabular-nums', 'text-amber-700' => $warn, 'text-gray-900' => ! $warn])>{{ $value }}</div>
                         <div class="mt-0.5 truncate text-xs text-gray-500">{{ $hint }}</div>
@@ -38,14 +38,14 @@
                 @endforeach
             </div>
 
-            <div class="grid gap-6 lg:grid-cols-2">
+            <div class="grid grid-cols-1 gap-4 px-4 sm:gap-6 sm:px-0 lg:grid-cols-2">
                 <x-dashboard-list title="Zahlung ausstehend" accent="amber" mark="paid" :articles="$paymentPending" :count="$paymentPendingCount"
                                   :href="route('pending.index', 'zahlung')" empty="Alle Verkäufe sind bezahlt." />
                 <x-dashboard-list title="Versand/Abholung ausstehend" accent="amber" mark="shipped" :articles="$shippingPending" :count="$shippingPendingCount"
                                   :href="route('pending.index', 'versand')" empty="Nichts zu verschicken oder abzuholen." />
                 <x-dashboard-list title="Zuletzt verkauft" :articles="$recentlySold" empty="Noch nichts verkauft." />
 
-                <section class="flex flex-col bg-white shadow-sm sm:rounded-lg">
+                <section class="flex min-w-0 flex-col rounded-lg bg-white shadow-sm">
                     <header class="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
                         <h3 class="font-semibold text-gray-900">Kategorien</h3>
                         <a href="{{ route('categories.create') }}" class="text-sm text-gray-500 hover:text-gray-800">+ Neue</a>

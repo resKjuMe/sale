@@ -18,8 +18,10 @@
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
             <div class="px-4 sm:px-0"><x-flash /></div>
 
+            <div class="px-4 sm:px-0">
             <x-dashboard-list title="Älteste zuerst" accent="amber"
                               :mark="$type === 'zahlung' ? 'paid' : 'shipped'" :articles="$articles" :empty="$empty" />
+            </div>
         </div>
     </div>
 </x-app-layout>
