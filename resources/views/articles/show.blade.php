@@ -82,6 +82,8 @@
                         <dd class="whitespace-pre-line text-gray-900">{{ $article->buyer_address ?? '–' }}</dd>
                         <dt class="text-gray-500">Verkaufspreis</dt>
                         <dd class="font-semibold text-gray-900">{{ $article->formattedSalePrice() ?? '–' }}</dd>
+                        <dt class="text-gray-500">Versandkosten</dt>
+                        <dd class="text-gray-900">{{ $article->formattedShippingCost() ?? '–' }}</dd>
                         <dt class="text-gray-500">Versand</dt>
                         <dd class="text-gray-900">
                             @if ($article->shipped)

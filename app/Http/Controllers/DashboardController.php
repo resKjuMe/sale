@@ -22,7 +22,8 @@ class DashboardController extends Controller
                 'available' => Article::where('sold', false)->count(),
                 'sold' => Article::where('sold', true)->count(),
                 'revenue' => (float) Article::where('sold', true)->select($amount)->value('total'),
-                'openAmount' => (float) Article::paymentPending()->select($amount)->value('total'),
+                'openAmount' => (float) Article::paymentPending()->select(DB::raw('sum(coalesce(sale_price, price, 0) + coalesce(shipping_cost, 0)) as total'))->value('total'),
+                'discount' => $this->averageDiscount(),
                 'soldThisMonth' => Article::where('sold', true)->where('sold_at', '>=', now()->startOfMonth())->count(),
             ],
             'paymentPending' => Article::paymentPending()->with('category')->orderBy('sold_at')->limit(self::LIST_LIMIT)->get(),
@@ -34,5 +35,22 @@ class DashboardController extends Controller
                 ->orderBy('name')
                 ->get(),
         ]);
+    }
+
+    /**
+     * Mittlerer Nachlass vom Angebots- zum Verkaufspreis, nur über Verkäufe mit beiden Preisen.
+     *
+     * @return array{percent: float, amount: float, count: int}|null
+     */
+    private function averageDiscount(): ?array
+    {
+        $row = Article::where('sold', true)->whereNotNull('sale_price')->where('price', '>', 0)
+            ->selectRaw('count(*) as total, avg((price - sale_price) / price) as ratio, avg(price - sale_price) as amount')
+            ->toBase()
+            ->first();
+
+        return $row->total > 0
+            ? ['percent' => round(100 * (float) $row->ratio), 'amount' => (float) $row->amount, 'count' => (int) $row->total]
+            : null;
     }
 }

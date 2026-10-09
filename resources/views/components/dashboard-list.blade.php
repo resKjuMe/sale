@@ -1,4 +1,4 @@
-@props(['title', 'articles', 'count' => null, 'href' => null, 'empty', 'accent' => 'gray'])
+@props(['title', 'articles', 'count' => null, 'href' => null, 'empty', 'accent' => 'gray', 'due' => false])
 
 <section class="flex flex-col bg-white shadow-sm sm:rounded-lg">
     <header class="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
@@ -33,7 +33,7 @@
                             </div>
                         </div>
                         <div class="shrink-0 text-right">
-                            <div class="text-sm font-semibold text-gray-900">{{ $article->formattedSalePrice() ?? $article->formattedPrice() ?? '–' }}</div>
+                            <div class="text-sm font-semibold text-gray-900" @if ($due && $article->shipping_cost !== null) title="inkl. {{ $article->formattedShippingCost() }} Versand" @endif>{{ $due ? \App\Models\Article::euro($article->amountDue()) : ($article->formattedSalePrice() ?? $article->formattedPrice() ?? '–') }}</div>
                             @if ($label = $article->soldSinceLabel())
                                 @php($days = (int) $article->sold_at->copy()->diffInDays(now()))
                                 <div @class(['text-xs', 'font-medium text-amber-700' => $accent === 'amber' && $days >= 7, 'text-gray-500' => ! ($accent === 'amber' && $days >= 7)])>{{ $label }}</div>

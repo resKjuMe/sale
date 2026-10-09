@@ -605,4 +605,36 @@ class CategoryArticleTest extends TestCase
             ->assertDontSee('Body frei');
         $this->assertSame('2026-09-25', $unpaid->fresh()->sold_at->format('Y-m-d'));
     }
+
+    public function test_shipping_cost_is_saved_shown_and_reset_when_unsold(): void
+    {
+        $article = Category::create(['name' => 'Bodys'])->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74']);
+
+        $this->put(route('articles.update', $article), ['brand' => 'Zara', 'size' => '74', 'sold' => '1', 'sale_price' => '8', 'shipping_cost' => '4,99'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('4.99', $article->fresh()->shipping_cost);
+        $this->assertSame(12.99, $article->fresh()->amountDue());
+        $this->get(route('articles.show', $article))->assertSeeInOrder(['Versandkosten', '4,99 €']);
+        $this->get(route('articles.edit', $article))->assertSee('value="4,99"', false);
+
+        $this->put(route('articles.update', $article), ['brand' => 'Zara', 'size' => '74', 'shipping_cost' => '-1'])->assertSessionHasErrors('shipping_cost');
+
+        $this->put(route('articles.update', $article), ['brand' => 'Zara', 'size' => '74', 'sold' => '0']);
+        $this->assertNull($article->fresh()->shipping_cost);
+    }
+
+    public function test_dashboard_shows_average_discount_and_open_amount_with_shipping(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $category->articles()->createMany([
+            ['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74', 'price' => 10, 'sale_price' => 8, 'shipping_cost' => 4.5, 'sold' => true],
+            ['image_path' => 'articles/b.jpg', 'brand' => 'Zara', 'size' => '74', 'price' => 20, 'sale_price' => 12, 'sold' => true, 'paid' => true],
+            ['image_path' => 'articles/c.jpg', 'brand' => 'Zara', 'size' => '74', 'sale_price' => 5, 'sold' => true, 'paid' => true],
+        ]);
+
+        $this->get(route('dashboard'))->assertOk()
+            ->assertSeeInOrder(['Ø Rabatt', '30 %', 'Ø 5,00 € bei 2 Verkäufen'])
+            ->assertSeeInOrder(['Noch offen', '12,50 €'])
+            ->assertSeeInOrder(['Zahlung ausstehend', '12,50 €']);
+    }
 }

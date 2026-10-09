@@ -12,7 +12,7 @@ class Article extends Model
 {
     protected $fillable = [
         'image_path', 'title', 'brand', 'size', 'condition', 'price', 'vinted_url',
-        'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipped', 'tracking_code',
+        'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipping_cost', 'shipped', 'tracking_code',
     ];
 
     public const STATUS_FLAGS = ['sold', 'paid', 'shipped'];
@@ -22,6 +22,7 @@ class Article extends Model
         'buyer_address' => null,
         'paid' => false,
         'sale_price' => null,
+        'shipping_cost' => null,
         'shipped' => false,
         'tracking_code' => null,
     ];
@@ -42,6 +43,7 @@ class Article extends Model
             'paid' => 'boolean',
             'paid_at' => 'datetime',
             'sale_price' => 'decimal:2',
+            'shipping_cost' => 'decimal:2',
             'shipped' => 'boolean',
             'shipped_at' => 'datetime',
         ];
@@ -95,6 +97,17 @@ class Article extends Model
         return self::euro($this->sale_price);
     }
 
+    public function formattedShippingCost(): ?string
+    {
+        return self::euro($this->shipping_cost);
+    }
+
+    // Was der Käufer insgesamt zahlt; ohne Verkaufspreis gilt der Angebotspreis.
+    public function amountDue(): float
+    {
+        return (float) ($this->sale_price ?? $this->price ?? 0) + (float) ($this->shipping_cost ?? 0);
+    }
+
     public function markSold(bool $sold): void
     {
         $this->fill(['sold' => $sold] + ($sold ? [] : self::UNSOLD_RESET))->save();
@@ -122,7 +135,7 @@ class Article extends Model
 
     public function hasSaleDetails(): bool
     {
-        return $this->buyer_name !== null || $this->buyer_address !== null || $this->sale_price !== null
+        return $this->buyer_name !== null || $this->buyer_address !== null || $this->sale_price !== null || $this->shipping_cost !== null
             || $this->paid || $this->shipped || $this->tracking_code !== null;
     }
 

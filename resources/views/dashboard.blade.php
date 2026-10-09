@@ -17,10 +17,17 @@
                     ['Verfügbar', $stats['available'], 'von '.$stats['total'].' Artikeln', route('articles.index', ['hide_sold' => 1]), false],
                     ['Verkauft', $stats['sold'], $stats['soldThisMonth'].' in diesem Monat', route('articles.index'), false],
                     ['Umsatz', \App\Models\Article::euro($stats['revenue']), 'aller verkauften Artikel', null, false],
+                    [
+                        'Ø Rabatt',
+                        $stats['discount'] ? number_format($stats['discount']['percent'], 0, ',', '.').' %' : '–',
+                        $stats['discount'] ? 'Ø '.\App\Models\Article::euro($stats['discount']['amount']).' bei '.$stats['discount']['count'].' Verkäufen' : 'noch keine Verkäufe mit Preis',
+                        null,
+                        false,
+                    ],
                     ['Noch offen', \App\Models\Article::euro($stats['openAmount']), $paymentPendingCount === 1 ? '1 Zahlung ausstehend' : $paymentPendingCount.' Zahlungen ausstehend', route('articles.index', ['pending' => ['payment']]), $paymentPendingCount > 0],
                 ];
             @endphp
-            <div class="grid grid-cols-2 gap-3 px-4 sm:px-0 lg:grid-cols-4 lg:gap-4">
+            <div class="grid grid-cols-2 gap-3 px-4 sm:grid-cols-3 sm:px-0 lg:grid-cols-5 lg:gap-4">
                 @foreach ($tiles as [$label, $value, $hint, $href, $warn])
                     @php($tag = $href ? 'a' : 'div')
                     <{{ $tag }} @if ($href) href="{{ $href }}" @endif @class(['block rounded-lg bg-white p-4 shadow-sm transition', 'hover:shadow-md' => $href])>
@@ -32,7 +39,7 @@
             </div>
 
             <div class="grid gap-6 lg:grid-cols-2">
-                <x-dashboard-list title="Zahlung ausstehend" accent="amber" :articles="$paymentPending" :count="$paymentPendingCount"
+                <x-dashboard-list title="Zahlung ausstehend" accent="amber" due :articles="$paymentPending" :count="$paymentPendingCount"
                                   :href="route('articles.index', ['pending' => ['payment']])" empty="Alle Verkäufe sind bezahlt." />
                 <x-dashboard-list title="Versand ausstehend" accent="amber" :articles="$shippingPending" :count="$shippingPendingCount"
                                   :href="route('articles.index', ['pending' => ['shipping']])" empty="Nichts zu verschicken." />

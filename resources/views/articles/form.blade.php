@@ -112,6 +112,13 @@
                                 <div class="flex items-end pb-2">
                                     <x-toggle name="paid" label="Bezahlt" model="paid" />
                                 </div>
+                                <div>
+                                    <x-input-label for="shipping_cost" value="Versandkosten in €" />
+                                    <x-text-input id="shipping_cost" name="shipping_cost" type="text" inputmode="decimal" class="mt-1 block w-full"
+                                                  :value="old('shipping_cost', $article->shipping_cost !== null ? str_replace('.', ',', $article->shipping_cost) : null)"
+                                                  placeholder="0,00" />
+                                    <x-input-error :messages="$errors->get('shipping_cost')" class="mt-2" />
+                                </div>
                                 <div class="sm:col-span-2 border-t border-gray-200 pt-4">
                                     <x-toggle name="shipped" label="Versendet" model="shipped" />
                                 </div>

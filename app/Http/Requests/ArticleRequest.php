@@ -29,6 +29,7 @@ class ArticleRequest extends FormRequest
             'buyer_address' => ['nullable', 'string', 'max:1000'],
             'paid' => ['sometimes', 'boolean'],
             'sale_price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'shipping_cost' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'shipped' => ['sometimes', 'boolean'],
             'tracking_code' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9]+$/'],
         ];
@@ -49,6 +50,7 @@ class ArticleRequest extends FormRequest
             'buyer_address' => 'Adresse',
             'paid' => 'Bezahlt',
             'sale_price' => 'Verkaufspreis',
+            'shipping_cost' => 'Versandkosten',
             'shipped' => 'Versendet',
             'tracking_code' => 'DHL-Sendungsnummer',
         ];
@@ -71,7 +73,7 @@ class ArticleRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        foreach (['price', 'sale_price'] as $field) {
+        foreach (['price', 'sale_price', 'shipping_cost'] as $field) {
             if (is_string($this->input($field))) {
                 $this->merge([$field => str_replace(',', '.', trim($this->input($field)))]);
             }
