@@ -131,6 +131,39 @@ class CategoryArticleTest extends TestCase
             ->assertSee('repeat(4,', false);
     }
 
+    public function test_bulk_page_is_linked_and_renders(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+
+        $this->get(route('categories.show', $category))->assertSee(route('categories.articles.bulk', $category));
+        $this->get(route('categories.articles.bulk', $category))
+            ->assertOk()
+            ->assertSee('multiple', false)
+            ->assertSee('bulkUpload(', false);
+    }
+
+    public function test_json_store_returns_created_and_json_validation_errors(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+
+        $this->postJson(route('categories.articles.store', $category), [
+            'image' => UploadedFile::fake()->image('a.jpg'),
+            'brand' => 'Nike',
+            'size' => '42',
+            'title' => '',
+            'condition' => '',
+            'price' => '',
+        ])->assertCreated()->assertJsonStructure(['id']);
+
+        $this->postJson(route('categories.articles.store', $category), [
+            'image' => UploadedFile::fake()->image('b.jpg'),
+            'brand' => '',
+            'size' => '42',
+        ])->assertUnprocessable()->assertJsonValidationErrors('brand');
+
+        $this->assertSame(1, $category->articles()->count());
+    }
+
     public function test_image_brand_and_size_are_required(): void
     {
         $category = Category::create(['name' => 'Schuhe']);

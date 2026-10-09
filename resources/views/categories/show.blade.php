@@ -9,6 +9,9 @@
                 <a href="{{ route('categories.articles.quick', $category) }}">
                     <x-primary-button type="button">Schnellerfassung</x-primary-button>
                 </a>
+                <a href="{{ route('categories.articles.bulk', $category) }}">
+                    <x-secondary-button type="button">Mehrere Bilder</x-secondary-button>
+                </a>
                 <a href="{{ route('categories.articles.create', $category) }}">
                     <x-secondary-button type="button">Neuer Artikel</x-secondary-button>
                 </a>
@@ -31,6 +34,11 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <x-flash />
+            @if (request()->integer('saved') > 0)
+                <div class="mb-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-800">
+                    {{ request()->integer('saved') }} Artikel gespeichert.
+                </div>
+            @endif
 
             @if ($category->description)
                 <p class="mb-6 text-gray-600">{{ $category->description }}</p>

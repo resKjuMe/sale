@@ -1,7 +1,7 @@
 const MAX_EDGE = 2000;
 const QUALITY = 0.85;
 
-async function downscale(file) {
+export async function downscale(file) {
     if (!file.type.startsWith('image/')) {
         return file;
     }
@@ -15,7 +15,7 @@ async function downscale(file) {
     bitmap.close();
 
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', QUALITY));
-    if (!blob || blob.size >= file.size) {
+    if (!blob || (scale === 1 && blob.size >= file.size)) {
         return file;
     }
 

@@ -21,6 +21,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('categories', CategoryController::class);
     Route::get('categories/{category}/print', [CategoryController::class, 'print'])->name('categories.print');
     Route::get('categories/{category}/articles/quick', [ArticleController::class, 'quick'])->name('categories.articles.quick');
+    Route::get('categories/{category}/articles/bulk', [ArticleController::class, 'bulk'])->name('categories.articles.bulk');
     Route::resource('categories.articles', ArticleController::class)->shallow()->except('index');
 });
 
