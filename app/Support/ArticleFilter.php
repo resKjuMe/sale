@@ -13,21 +13,26 @@ class ArticleFilter
      * @param  list<string>  $sizes
      * @param  list<string>  $brands
      * @param  list<int>  $categories
+     * @param  list<string>  $pending  'payment' und/oder 'shipping', nur intern
      */
     public function __construct(
         public readonly array $sizes = [],
         public readonly array $brands = [],
         public readonly bool $hideSold = false,
         public readonly array $categories = [],
+        public readonly array $pending = [],
     ) {}
 
-    public static function fromRequest(Request $request): self
+    public const PENDING = ['payment' => 'Zahlung ausstehend', 'shipping' => 'Versand ausstehend'];
+
+    public static function fromRequest(Request $request, bool $internal = true): self
     {
         return new self(
             self::list($request, 'size'),
             self::list($request, 'brand'),
             $request->boolean('hide_sold'),
             array_values(array_filter(array_map('intval', self::list($request, 'category')))),
+            $internal ? array_values(array_intersect(array_keys(self::PENDING), self::list($request, 'pending'))) : [],
         );
     }
 
@@ -37,12 +42,17 @@ class ArticleFilter
             ->when($this->sizes, fn (Builder $query) => $query->whereIn('size', $this->sizes))
             ->when($this->brands, fn (Builder $query) => $query->whereIn('brand', $this->brands))
             ->when($this->hideSold, fn (Builder $query) => $query->where('sold', false))
-            ->when($this->categories, fn (Builder $query) => $query->whereIn('category_id', $this->categories));
+            ->when($this->categories, fn (Builder $query) => $query->whereIn('category_id', $this->categories))
+            ->when($this->pending, fn (Builder $query) => $query->where('sold', true)->where(function (Builder $query) {
+                foreach ($this->pending as $pending) {
+                    $query->orWhere($pending === 'payment' ? 'paid' : 'shipped', false);
+                }
+            }));
     }
 
     public function isActive(): bool
     {
-        return $this->sizes !== [] || $this->brands !== [] || $this->hideSold || $this->categories !== [];
+        return $this->sizes !== [] || $this->brands !== [] || $this->hideSold || $this->categories !== [] || $this->pending !== [];
     }
 
     public function query(): array
@@ -52,15 +62,32 @@ class ArticleFilter
             'size' => $this->sizes,
             'brand' => $this->brands,
             'hide_sold' => $this->hideSold ? 1 : null,
+            'pending' => $this->pending,
         ]);
     }
 
+    public function without(string $key): self
+    {
+        return new self(
+            $key === 'size' ? [] : $this->sizes,
+            $key === 'brand' ? [] : $this->brands,
+            $this->hideSold,
+            $key === 'category' ? [] : $this->categories,
+            $key === 'pending' ? [] : $this->pending,
+        );
+    }
+
     /**
+     * Anzahl je Wert unter allen übrigen Filtern; Werte ohne Treffer fehlen.
+     *
+     * @param  'size'|'brand'|'category'  $key
      * @return array<string, int> Wert => Anzahl, natürlich sortiert
      */
-    public static function options(Builder $articles, string $column): array
+    public function facet(Builder $articles, string $key): array
     {
-        return (clone $articles)->toBase()
+        $column = $key === 'category' ? 'category_id' : $key;
+
+        return $this->without($key)->apply(clone $articles)->toBase()
             ->selectRaw("$column as value, count(*) as total")
             ->groupBy($column)
             ->get()
@@ -70,14 +97,16 @@ class ArticleFilter
     }
 
     /**
-     * @return array<int, array{0: string, 1: int}> Kategorie-ID => [Name, Anzahl], nach Name sortiert
+     * @return array<string, int> 'payment'/'shipping' => Anzahl unter allen übrigen Filtern
      */
-    public static function categoryOptions(): array
+    public function pendingCounts(Builder $articles): array
     {
-        return Category::withCount('articles')->orderBy('name')->get()
-            ->filter(fn (Category $category) => $category->articles_count > 0)
-            ->mapWithKeys(fn (Category $category) => [$category->id => [$category->name, $category->articles_count]])
-            ->all();
+        $base = $this->without('pending');
+
+        return [
+            'payment' => $base->apply(clone $articles)->paymentPending()->count(),
+            'shipping' => $base->apply(clone $articles)->shippingPending()->count(),
+        ];
     }
 
     /**

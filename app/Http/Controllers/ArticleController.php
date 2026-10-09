@@ -17,9 +17,16 @@ class ArticleController extends Controller
     public function index(Request $request): View
     {
         $filter = ArticleFilter::fromRequest($request);
-        $articles = $filter->apply(Article::query())->with('category')->latest()->paginate(100)->withQueryString();
+        $articles = $filter->apply(Article::query())->with('category')->when($filter->pending, fn ($query) => $query->orderBy('sold_at'), fn ($query) => $query->latest())->paginate(100)->withQueryString();
 
         return view('articles.index', ['articles' => $articles, 'filter' => $filter, 'total' => Article::count()]);
+    }
+
+    public function regeneratePublicLink(Request $request): RedirectResponse
+    {
+        $request->user()->regeneratePublicToken();
+
+        return redirect()->route('articles.index')->with('status', 'Neuer öffentlicher Link erzeugt, der alte ist ungültig.');
     }
 
     public function create(Category $category): View

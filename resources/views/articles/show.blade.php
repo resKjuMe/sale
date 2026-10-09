@@ -72,6 +72,10 @@
                     <dt class="text-gray-500">Status</dt>
                     <dd><x-sale-badge :article="$article" /></dd>
                     @if ($article->sold)
+                        <dt class="text-gray-500">Verkauft am</dt>
+                        <dd class="text-gray-900">{{ $article->statusDate('sold') ?? '–' }}</dd>
+                        <dt class="text-gray-500">Bezahlt am</dt>
+                        <dd @class(['text-gray-900' => $article->paid, 'font-medium text-amber-700' => ! $article->paid])>{{ $article->paid ? ($article->statusDate('paid') ?? 'bezahlt') : 'ausstehend' }}</dd>
                         <dt class="text-gray-500">An wen</dt>
                         <dd class="text-gray-900">{{ $article->buyer_name ?? '–' }}</dd>
                         <dt class="text-gray-500">Adresse</dt>
@@ -81,7 +85,7 @@
                         <dt class="text-gray-500">Versand</dt>
                         <dd class="text-gray-900">
                             @if ($article->shipped)
-                                Versendet
+                                Versendet{{ $article->shipped_at ? ' am '.$article->statusDate('shipped') : '' }}
                                 @if ($article->tracking_code)
                                     · <a href="{{ $article->trackingUrl() }}" target="_blank" rel="noopener"
                                          class="font-mono text-indigo-600 underline hover:text-indigo-800">{{ $article->tracking_code }}</a>

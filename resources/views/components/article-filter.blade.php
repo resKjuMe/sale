@@ -1,15 +1,25 @@
-@props(['filter', 'articles', 'withSoldToggle' => true, 'withCategories' => false])
+@props(['filter', 'articles', 'withSoldToggle' => true, 'withCategories' => false, 'withPending' => false])
 
 @php
-    $withLabels = fn (array $options) => collect($options)->map(fn ($count, $value) => [(string) $value, (string) $value, $count])->values()->all();
+    // Jede Gruppe zählt unter allen übrigen Filtern; gewählte Werte bleiben zum Abwählen sichtbar.
+    $facet = function (string $key, array $selected, ?callable $label = null) use ($filter, $articles) {
+        $counts = $filter->facet($articles, $key) + array_fill_keys($selected, 0);
+        $options = collect($counts)->sortKeysUsing(fn ($a, $b) => strnatcasecmp((string) $a, (string) $b))->map(fn ($count, $value) => [(string) $value, $label ? $label((string) $value) : (string) $value, $count]);
+
+        return $label ? $options->sortBy(fn ($option) => mb_strtolower($option[1]))->values()->all() : $options->values()->all();
+    };
+    $categoryNames = $withCategories ? \App\Models\Category::pluck('name', 'id')->all() : [];
     $groups = array_filter([
         'category' => $withCategories
-            ? ['Kategorie', collect(\App\Support\ArticleFilter::categoryOptions())->map(fn ($option, $id) => [(string) $id, $option[0], $option[1]])->values()->all(), array_map('strval', $filter->categories)]
+            ? ['Kategorie', $facet('category', array_map('strval', $filter->categories), fn ($id) => $categoryNames[$id] ?? '?'), array_map('strval', $filter->categories)]
             : null,
-        'size' => ['Größe', $withLabels(\App\Support\ArticleFilter::options($articles, 'size')), $filter->sizes],
-        'brand' => ['Marke', $withLabels(\App\Support\ArticleFilter::options($articles, 'brand')), $filter->brands],
-    ], fn ($group) => $group !== null && count($group[1]) > 1);
+        'size' => ['Größe', $facet('size', $filter->sizes), $filter->sizes],
+        'brand' => ['Marke', $facet('brand', $filter->brands), $filter->brands],
+    ], fn ($group) => $group !== null && (count($group[1]) > 1 || $group[2] !== []));
     $selectedCount = count($filter->sizes) + count($filter->brands) + count($filter->categories);
+    $pending = $withPending
+        ? array_filter($filter->pendingCounts($articles), fn ($count, $value) => $count > 0 || in_array($value, $filter->pending, true), ARRAY_FILTER_USE_BOTH)
+        : [];
 @endphp
 
 @if ($groups || $withSoldToggle)
@@ -23,13 +33,24 @@
                 </label>
             @endif
 
+            @if ($withPending)
+                <div class="flex flex-wrap items-center gap-2" data-live-target="filter-pending">
+                    @foreach ($pending as $value => $count)
+                        <label class="cursor-pointer">
+                            <input type="checkbox" name="pending[]" value="{{ $value }}" class="peer sr-only" @checked(in_array($value, $filter->pending, true))>
+                            <span class="inline-block rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm text-amber-800 transition hover:border-amber-400 peer-checked:border-gray-800 peer-checked:bg-gray-800 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-gray-500">{{ \App\Support\ArticleFilter::PENDING[$value] }}<span class="ml-1.5 inline-block min-w-[1.25rem] rounded-full bg-white/70 px-1.5 text-center text-xs leading-5 [.peer:checked~*_&]:bg-white/20">{{ $count }}</span></span>
+                        </label>
+                    @endforeach
+                </div>
+            @endif
+
             <div class="ms-auto flex items-center gap-3">
                 <span data-live-target="filter-reset">
                     @if ($filter->isActive())
                         <a href="{{ url()->current() }}" data-live-reset class="text-sm text-gray-500 underline hover:text-gray-700">Zurücksetzen</a>
                     @endif
                 </span>
-                @if ($groups)
+                @if ($groups || $selectedCount > 0)
                     {{-- Ohne name: wird nicht mitgesendet, steuert nur das Aufklappen. --}}
                     <label class="inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-gray-400 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-gray-500">
                         <input type="checkbox" class="filter-open sr-only" @checked($selectedCount > 0)>
@@ -47,8 +68,8 @@
             </div>
         </div>
 
-        @if ($groups)
-            <div class="mt-3 hidden space-y-3 border-t border-gray-100 pt-3 group-has-[.filter-open:checked]/filter:block">
+        @if ($groups || $selectedCount > 0)
+            <div class="mt-3 hidden space-y-3 border-t border-gray-100 pt-3 group-has-[.filter-open:checked]/filter:block" data-live-target="filter-panel">
                 @foreach ($groups as $name => [$label, $options, $selected])
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="w-14 shrink-0 text-sm font-medium text-gray-700">{{ $label }}</span>

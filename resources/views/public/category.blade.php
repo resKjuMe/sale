@@ -4,15 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>{{ $category->name }} · {{ config('app.name') }}</title>
+    <title>{{ ($overview ?? false) ? $title : $title.' · '.config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/live-filter.js'])
 </head>
 <body class="bg-gray-100 font-sans text-gray-900 antialiased">
     <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <header class="mb-6">
-            <h1 class="text-2xl font-semibold">{{ $category->name }}</h1>
-            @if ($category->description)
-                <p class="mt-2 whitespace-pre-line text-gray-600">{{ $category->description }}</p>
+            <h1 class="text-2xl font-semibold">{{ $title }}</h1>
+            @if ($description)
+                <p class="mt-2 whitespace-pre-line text-gray-600">{{ $description }}</p>
             @endif
             <p class="mt-2 text-sm text-gray-500" data-live-target="counts">
                 {{ $articles->where('sold', false)->count() }} verfügbar
@@ -22,7 +22,7 @@
             </p>
         </header>
 
-        <x-article-filter :filter="$filter" :articles="$category->articles()" class="mb-6" />
+        <x-article-filter :filter="$filter" :articles="$source" :with-categories="$overview ?? false" class="mb-6" />
 
         <div data-live-target="results">
         @if ($articles->isEmpty())
@@ -39,6 +39,9 @@
                             @endif
                         </a>
                         <figcaption @class(['p-3 text-sm', 'text-gray-400' => $article->sold])>
+                            @if ($overview ?? false)
+                                <div class="truncate text-xs font-medium uppercase tracking-wide text-gray-400">{{ $article->category->name }}</div>
+                            @endif
                             @if ($article->title)
                                 <div @class(['truncate font-medium', 'text-gray-900' => ! $article->sold, 'line-through' => $article->sold])>{{ $article->title }}</div>
                             @endif

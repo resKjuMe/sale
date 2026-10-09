@@ -16,7 +16,9 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <x-flash />
 
-            <x-article-filter :filter="$filter" :articles="\App\Models\Article::query()" with-categories class="mb-6 sm:rounded-lg" />
+            <x-public-link :url="auth()->user()->overviewUrl()" :regenerate="route('articles.public-link')" />
+
+            <x-article-filter :filter="$filter" :articles="\App\Models\Article::query()" with-categories with-pending class="mb-6 sm:rounded-lg" />
 
             @include('articles.partials.grid', [
                 'emptyText' => $filter->isActive() ? 'Keine Artikel passen zum Filter.' : 'Es gibt noch keine Artikel.',

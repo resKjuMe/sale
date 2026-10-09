@@ -491,4 +491,93 @@ class CategoryArticleTest extends TestCase
         $this->get(route('articles.index', ['size' => ['74'], 'hide_sold' => 1]))
             ->assertSee('Hose Beta')->assertDontSee(['Body Alpha', 'Hose Gamma']);
     }
+
+    public function test_status_timestamps_are_set_and_cleared_with_their_flags(): void
+    {
+        $this->travelTo(now()->setDateTime(2026, 10, 9, 12, 0));
+        $article = Category::create(['name' => 'Bodys'])->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74']);
+        $this->assertNull($article->sold_at);
+
+        $article->markSold(true);
+        $this->travel(2)->hours();
+        $article->update(['paid' => true, 'shipped' => true]);
+        $this->travel(1)->hours();
+        $article->update(['buyer_name' => 'Erika']);
+
+        $article->refresh();
+        $this->assertSame('2026-10-09 12:00', $article->sold_at->format('Y-m-d H:i'));
+        $this->assertSame('2026-10-09 14:00', $article->paid_at->format('Y-m-d H:i'));
+        $this->assertSame('09.10.2026, 16:00', $article->statusDate('shipped'));
+
+        $article->markSold(false);
+        $article->refresh();
+        $this->assertNull($article->sold_at);
+        $this->assertNull($article->paid_at);
+        $this->assertNull($article->shipped_at);
+    }
+
+    public function test_pending_payment_and_shipping_filter_is_internal_and_sorted_by_sale_date(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $this->travelTo(now()->setDateTime(2026, 10, 1, 12, 0));
+        $newer = $category->articles()->create(['image_path' => 'articles/a.jpg', 'title' => 'Neu offen', 'brand' => 'Zara', 'size' => '74']);
+        $older = $category->articles()->create(['image_path' => 'articles/b.jpg', 'title' => 'Alt offen', 'brand' => 'Zara', 'size' => '74']);
+        $older->markSold(true);
+        $this->travel(1)->days();
+        $newer->markSold(true);
+        $category->articles()->create(['image_path' => 'articles/c.jpg', 'title' => 'Bezahlt nicht versendet', 'brand' => 'Zara', 'size' => '74', 'sold' => true, 'paid' => true]);
+        $category->articles()->create(['image_path' => 'articles/d.jpg', 'title' => 'Erledigt', 'brand' => 'Zara', 'size' => '74', 'sold' => true, 'paid' => true, 'shipped' => true]);
+
+        $this->get(route('articles.index'))->assertSeeInOrder(['Zahlung ausstehend', '2', 'Versand ausstehend', '3']);
+        $this->get(route('articles.index', ['pending' => ['payment']]))
+            ->assertSeeInOrder(['Alt offen', 'Neu offen'])->assertDontSee(['Bezahlt nicht versendet', 'Erledigt']);
+        $this->get(route('categories.show', [$category, 'pending' => ['shipping']]))
+            ->assertSee(['Alt offen', 'Neu offen', 'Bezahlt nicht versendet'])->assertDontSee('Erledigt');
+        $this->get($category->publicUrl().'?pending[]=payment')
+            ->assertSee(['Erledigt', 'Bezahlt nicht versendet'])->assertDontSee('Zahlung ausstehend');
+    }
+
+    public function test_filter_counts_follow_other_selected_filters_and_hide_options_without_hits(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $category->articles()->createMany([
+            ['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '68 / 72'],
+            ['image_path' => 'articles/b.jpg', 'brand' => 'Zara', 'size' => '74'],
+            ['image_path' => 'articles/c.jpg', 'brand' => 'H&M', 'size' => '74'],
+            ['image_path' => 'articles/d.jpg', 'brand' => 'Steiff', 'size' => '80'],
+        ]);
+        $pills = fn (string $html, string $name) => collect(preg_match_all('#name="'.preg_quote($name).'\[\]" value="([^"]+)".*?>(\d+)</span></span>#s', $html, $m) ? array_combine($m[1], $m[2]) : [])->all();
+
+        $html = $this->get($category->publicUrl())->getContent();
+        $this->assertSame(['68 / 72' => '1', '74' => '2', '80' => '1'], $pills($html, 'size'));
+        $this->assertSame(['H&amp;M' => '1', 'Steiff' => '1', 'Zara' => '2'], $pills($html, 'brand'));
+
+        $html = $this->get($category->publicUrl().'?brand[]=Zara')->getContent();
+        $this->assertSame(['68 / 72' => '1', '74' => '1'], $pills($html, 'size'));
+        $this->assertSame(['H&amp;M' => '1', 'Steiff' => '1', 'Zara' => '2'], $pills($html, 'brand'));
+
+        $html = $this->get($category->publicUrl().'?size[]=74&brand[]=Steiff')->getContent();
+        $this->assertSame(['74' => '0', '80' => '1'], $pills($html, 'size'));
+    }
+
+    public function test_overview_has_public_link_showing_all_articles_with_category_filter(): void
+    {
+        $bodys = Category::create(['name' => 'Bodys']);
+        $hosen = Category::create(['name' => 'Hosen']);
+        $bodys->articles()->create(['image_path' => 'articles/a.jpg', 'title' => 'Body Alpha', 'brand' => 'Zara', 'size' => '74']);
+        $hosen->articles()->create(['image_path' => 'articles/b.jpg', 'title' => 'Hose Beta', 'brand' => 'H&M', 'size' => '74', 'sold' => true]);
+
+        $user = auth()->user();
+        $this->get(route('articles.index'))->assertOk();
+        $url = $user->fresh()->overviewUrl();
+        $this->get(route('articles.index'))->assertSee($url);
+
+        auth()->logout();
+        $this->get($url)->assertOk()->assertSee(['Body Alpha', 'Hose Beta', 'Bodys', 'Hosen', 'Kategorie'])->assertDontSee('Zahlung ausstehend');
+        $this->get($url.'?category[]='.$bodys->id)->assertSee('Body Alpha')->assertDontSee('Hose Beta');
+        $this->get(route('public.overview', 'falsch'))->assertNotFound();
+
+        $this->actingAs($user)->post(route('articles.public-link'))->assertRedirect(route('articles.index'));
+        $this->get($url)->assertNotFound();
+    }
 }

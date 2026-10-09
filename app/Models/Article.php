@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ArticleCondition;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +14,8 @@ class Article extends Model
         'image_path', 'title', 'brand', 'size', 'condition', 'price', 'vinted_url',
         'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipped', 'tracking_code',
     ];
+
+    public const STATUS_FLAGS = ['sold', 'paid', 'shipped'];
 
     public const UNSOLD_RESET = [
         'buyer_name' => null,
@@ -35,15 +38,36 @@ class Article extends Model
             'condition' => ArticleCondition::class,
             'price' => 'decimal:2',
             'sold' => 'boolean',
+            'sold_at' => 'datetime',
             'paid' => 'boolean',
+            'paid_at' => 'datetime',
             'sale_price' => 'decimal:2',
             'shipped' => 'boolean',
+            'shipped_at' => 'datetime',
         ];
     }
 
     protected static function booted(): void
     {
+        // Zeitpunkt beim Setzen merken, beim Zurücknehmen löschen.
+        static::saving(function (Article $article) {
+            foreach (self::STATUS_FLAGS as $flag) {
+                if (! $article->exists || $article->isDirty($flag)) {
+                    $article->{"{$flag}_at"} = $article->{$flag} ? ($article->{"{$flag}_at"} ?? now()) : null;
+                }
+            }
+        });
         static::deleted(fn (Article $article) => Storage::disk('public')->delete($article->image_path));
+    }
+
+    public function scopePaymentPending(Builder $query): void
+    {
+        $query->where('sold', true)->where('paid', false);
+    }
+
+    public function scopeShippingPending(Builder $query): void
+    {
+        $query->where('sold', true)->where('shipped', false);
     }
 
     public function category(): BelongsTo
@@ -74,6 +98,12 @@ class Article extends Model
     public function markSold(bool $sold): void
     {
         $this->fill(['sold' => $sold] + ($sold ? [] : self::UNSOLD_RESET))->save();
+    }
+
+    // Gespeichert wird in UTC, angezeigt in deutscher Zeit.
+    public function statusDate(string $flag, string $format = 'd.m.Y, H:i'): ?string
+    {
+        return $this->{"{$flag}_at"}?->timezone('Europe/Berlin')->format($format);
     }
 
     public function hasSaleDetails(): bool
