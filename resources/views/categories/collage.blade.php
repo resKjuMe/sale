@@ -1,15 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
-        <a href="{{ route('categories.show', $category) }}" class="text-sm text-gray-500 hover:text-gray-700">&larr; {{ $category->name }}</a>
+        <a href="{{ route('categories.show', [$category, ...$filter->query()]) }}" class="text-sm text-gray-500 hover:text-gray-700">&larr; {{ $category->name }}</a>
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">Collagen</h2>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8"
              x-data="collage({ articles: @js($articles), title: @js($category->name), slug: @js(Str::slug($category->name) ?: 'kategorie') })">
+            <x-article-filter :filter="$filter" :category="$category" :with-status="false" class="mb-6 sm:rounded-lg" />
+
             @if ($articles->isEmpty())
                 <div class="bg-white shadow-sm sm:rounded-lg p-6 text-gray-600">
-                    In dieser Kategorie gibt es noch keine Artikel.
+                    {{ $filter->isActive() ? 'Keine Artikel passen zum Filter.' : 'In dieser Kategorie gibt es noch keine Artikel.' }}
                 </div>
             @else
                 <div class="mb-6 space-y-4 bg-white p-4 shadow-sm sm:rounded-lg">

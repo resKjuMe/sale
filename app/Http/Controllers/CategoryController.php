@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Models\Category;
+use App\Support\ArticleFilter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -32,11 +33,12 @@ class CategoryController extends Controller
         return redirect()->route('categories.show', $category)->with('status', 'Kategorie angelegt.');
     }
 
-    public function show(Category $category): View
+    public function show(Request $request, Category $category): View
     {
-        $articles = $category->articles()->latest()->paginate(100);
+        $filter = ArticleFilter::fromRequest($request);
+        $articles = $filter->apply($category->articles())->latest()->paginate(100)->withQueryString();
 
-        return view('categories.show', compact('category', 'articles'));
+        return view('categories.show', compact('category', 'articles', 'filter'));
     }
 
     public function print(Request $request, Category $category): View
@@ -48,9 +50,11 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function collage(Category $category): View
+    public function collage(Request $request, Category $category): View
     {
-        $articles = $category->articles()->oldest()->get()->map(fn (Article $article) => [
+        // Verkaufte steuert die Collage-Seite selbst über „Verkaufte einbeziehen".
+        $filter = ArticleFilter::fromRequest($request->merge(['status' => null]));
+        $articles = $filter->apply($category->articles())->oldest()->get()->map(fn (Article $article) => [
             'id' => $article->id,
             'brand' => $article->brand,
             'size' => $article->size,
@@ -59,7 +63,7 @@ class CategoryController extends Controller
             'image' => parse_url($article->imageUrl(), PHP_URL_PATH),
         ]);
 
-        return view('categories.collage', compact('category', 'articles'));
+        return view('categories.collage', compact('category', 'articles', 'filter'));
     }
 
     public function regeneratePublicLink(Category $category): RedirectResponse

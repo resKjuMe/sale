@@ -429,4 +429,43 @@ class CategoryArticleTest extends TestCase
             'image' => '/storage/'.$article->image_path,
         ]], $articles->all());
     }
+
+    public function test_category_and_public_page_filter_by_size_brand_and_status(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $category->articles()->createMany([
+            ['image_path' => 'articles/a.jpg', 'title' => 'Body Alpha', 'brand' => 'Zara', 'size' => '68 / 72'],
+            ['image_path' => 'articles/b.jpg', 'title' => 'Body Beta', 'brand' => 'H&M', 'size' => '6-12 Monate'],
+            ['image_path' => 'articles/c.jpg', 'title' => 'Body Gamma', 'brand' => 'Zara', 'size' => '74', 'sold' => true],
+        ]);
+
+        foreach ([route('categories.show', $category), $category->publicUrl()] as $url) {
+            $this->get($url)->assertOk()->assertSee(['Body Alpha', 'Body Beta', 'Body Gamma', 'Größe', 'Marke']);
+            $this->get($url.'?'.http_build_query(['size' => ['68 / 72', '6-12 Monate']]))
+                ->assertSee(['Body Alpha', 'Body Beta'])->assertDontSee('Body Gamma');
+            $this->get($url.'?brand=Zara')->assertSee(['Body Alpha', 'Body Gamma'])->assertDontSee('Body Beta');
+            $this->get($url.'?status=sold')->assertSee('Body Gamma')->assertDontSee(['Body Alpha', 'Body Beta']);
+            $this->get($url.'?status=available&brand=Zara')->assertSee('Body Alpha')->assertDontSee(['Body Beta', 'Body Gamma']);
+            $this->get($url.'?status=bogus')->assertSee(['Body Alpha', 'Body Gamma']);
+            $this->get($url.'?brand=Nobody')->assertSee('Keine Artikel passen zum Filter.');
+        }
+    }
+
+    public function test_collage_page_applies_size_and_brand_filter_but_keeps_sold_articles(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $category->articles()->createMany([
+            ['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '68 / 72'],
+            ['image_path' => 'articles/b.jpg', 'brand' => 'H&M', 'size' => '68 / 72', 'sold' => true],
+            ['image_path' => 'articles/c.jpg', 'brand' => 'Zara', 'size' => '74'],
+        ]);
+
+        $this->get(route('categories.show', [$category, 'size' => ['68 / 72']]))
+            ->assertSee(route('categories.collage', [$category, 'size' => ['68 / 72']]), false);
+
+        $articles = $this->get(route('categories.collage', [$category, 'size' => ['68 / 72'], 'status' => 'available']))
+            ->assertOk()->viewData('articles');
+
+        $this->assertSame(['Zara', 'H&M'], $articles->pluck('brand')->all());
+    }
 }

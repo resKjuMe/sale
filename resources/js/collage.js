@@ -7,7 +7,7 @@ const QUALITY = 0.92;
 const FONT = '"Figtree", ui-sans-serif, system-ui, sans-serif';
 const COLORS = { background: '#f4efe8', ink: '#1f2937', muted: '#6b7280', placeholder: '#e5e0d8' };
 
-export const GRIDS = [[2, 2], [2, 3], [3, 3], [3, 4], [3, 5], [4, 5], [4, 6]];
+export const GRIDS = [[1, 1], [2, 2], [2, 3], [3, 3], [3, 4], [3, 5], [4, 5], [4, 6]];
 
 export function formatSize(raw) {
     const size = String(raw).trim()

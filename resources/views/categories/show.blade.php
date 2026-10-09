@@ -18,7 +18,7 @@
                 <a href="{{ route('categories.print', $category) }}" target="_blank">
                     <x-secondary-button type="button">Druckansicht</x-secondary-button>
                 </a>
-                <a href="{{ route('categories.collage', $category) }}">
+                <a href="{{ route('categories.collage', [$category, ...$filter->query()]) }}">
                     <x-secondary-button type="button">Collagen</x-secondary-button>
                 </a>
                 <a href="{{ route('categories.edit', $category) }}">
@@ -65,9 +65,11 @@
                 </form>
             </div>
 
+            <x-article-filter :filter="$filter" :category="$category" class="mb-6 sm:rounded-lg" />
+
             @if ($articles->isEmpty())
                 <div class="bg-white shadow-sm sm:rounded-lg p-6 text-gray-600">
-                    In dieser Kategorie gibt es noch keine Artikel.
+                    {{ $filter->isActive() ? 'Keine Artikel passen zum Filter.' : 'In dieser Kategorie gibt es noch keine Artikel.' }}
                 </div>
             @else
                 <div x-data="sellMode({

@@ -22,8 +22,10 @@
             </p>
         </header>
 
+        <x-article-filter :filter="$filter" :category="$category" class="mb-6" />
+
         @if ($articles->isEmpty())
-            <p class="rounded-lg bg-white p-6 text-gray-600 shadow-sm">Hier gibt es noch keine Artikel.</p>
+            <p class="rounded-lg bg-white p-6 text-gray-600 shadow-sm">{{ $filter->isActive() ? 'Keine Artikel passen zum Filter.' : 'Hier gibt es noch keine Artikel.' }}</p>
         @else
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 @foreach ($articles as $article)
