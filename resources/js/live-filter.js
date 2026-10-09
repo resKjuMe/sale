@@ -11,7 +11,7 @@ async function update(form) {
     targets.forEach((el) => el.classList.add('opacity-60', 'transition-opacity'));
 
     try {
-        const response = await fetch(url, { signal: controller.signal, headers: { Accept: 'text/html' } });
+        const response = await fetch(url, { signal: controller.signal, headers: { Accept: 'text/html', 'X-Live-Filter': '1' } });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }

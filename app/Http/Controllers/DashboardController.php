@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Models\Category;
+use App\Models\PageView;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -36,10 +37,32 @@ class DashboardController extends Controller
             'shippingPending' => Article::shippingPending()->with(['category', 'bundle.articles'])->orderBy('sold_at')->limit(self::LIST_LIMIT)->get(),
             'shippingPendingCount' => Article::shippingPending()->count(),
             'recentlySold' => Article::where('sold', true)->with(['category', 'bundle.articles'])->latest('sold_at')->limit(self::LIST_LIMIT)->get(),
+            'views' => $this->views(),
             'categories' => Category::withCount(['articles', 'articles as available_count' => fn ($query) => $query->where('sold', false)])
                 ->orderBy('name')
                 ->get(),
         ]);
+    }
+
+    /**
+     * Aufrufe der öffentlichen Links der letzten 7 Tage, je Link.
+     *
+     * @return array{today: int, week: int, visitors: int, links: \Illuminate\Support\Collection}
+     */
+    private function views(): array
+    {
+        $since = now()->subDays(6)->toDateString();
+        $week = PageView::where('viewed_on', '>=', $since);
+
+        return [
+            'today' => PageView::where('viewed_on', now()->toDateString())->count(),
+            'week' => (clone $week)->count(),
+            // Besucher je Tag eindeutig, über die Woche aufsummiert (der Hash wechselt täglich).
+            'visitors' => (int) (clone $week)->selectRaw('count(distinct visitor, viewed_on) as total')->value('total'),
+            'links' => (clone $week)->with('category')
+                ->selectRaw('category_id, count(*) as views, count(distinct visitor, viewed_on) as visitors')
+                ->groupBy('category_id')->orderByDesc('views')->get(),
+        ];
     }
 
     /**

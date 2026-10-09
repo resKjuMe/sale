@@ -109,6 +109,32 @@
                         </ul>
                     @endif
                 </section>
+
+                <section class="flex min-w-0 flex-col rounded-lg bg-white shadow-sm lg:col-span-2">
+                    <header class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-gray-100 px-4 py-3">
+                        <h3 class="font-semibold text-gray-900">Aufrufe öffentlicher Links</h3>
+                        <span class="text-sm tabular-nums text-gray-500">heute {{ $views['today'] }} · 7 Tage {{ $views['week'] }} Aufrufe, {{ $views['visitors'] }} Besucher</span>
+                    </header>
+                    @if ($views['links']->isEmpty())
+                        <p class="px-4 py-6 text-sm text-gray-500">In den letzten 7 Tagen hat niemand einen öffentlichen Link geöffnet.</p>
+                    @else
+                        @php($maxViews = $views['links']->max('views'))
+                        <ul class="divide-y divide-gray-100">
+                            @foreach ($views['links'] as $link)
+                                <li class="px-4 py-2.5">
+                                    <div class="flex items-baseline justify-between gap-3 text-sm">
+                                        <span class="truncate font-medium text-gray-900">{{ $link->category?->name ?? 'Gesamtübersicht' }}</span>
+                                        <span class="shrink-0 tabular-nums text-gray-500">{{ $link->views === 1 ? '1 Aufruf' : $link->views.' Aufrufe' }} · {{ $link->visitors }} Besucher</span>
+                                    </div>
+                                    <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-gray-100">
+                                        <div class="h-full rounded-full bg-violet-500" style="width: {{ round(100 * $link->views / $maxViews) }}%"></div>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                    <p class="border-t border-gray-100 px-4 py-2 text-xs text-gray-400">Ohne Cookies und ohne gespeicherte IP-Adressen; Link-Vorschauen und Bots zählen nicht.</p>
+                </section>
             </div>
         </div>
     </div>
