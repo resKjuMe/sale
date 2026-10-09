@@ -1,5 +1,8 @@
 @props(['article' => null])
 
+{{-- Ohne API-Key gibt es nichts anzubieten. --}}
+@if (app(\App\Services\ArticleAssistant::class)->configured())
+
 <div x-data="aiSuggest({ url: @js(route('articles.ai-suggest')), articleId: @js($article?->id) })" {{ $attributes->class('space-y-1.5') }}>
     <div class="flex flex-wrap gap-2">
         @foreach (['brand_size' => 'Marke & Größe erkennen', 'title' => 'Titel vorschlagen'] as $mode => $label)
@@ -13,3 +16,4 @@
     </div>
     <p x-show="message" x-cloak x-text="message" class="text-xs" :class="failed ? 'text-red-600' : 'text-violet-700'"></p>
 </div>
+@endif

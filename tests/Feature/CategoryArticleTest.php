@@ -892,6 +892,8 @@ class CategoryArticleTest extends TestCase
     public function test_ai_suggestion_reports_missing_api_key(): void
     {
         $this->app->instance(ArticleAssistant::class, new ArticleAssistant(null, 'claude-opus-5-5'));
+        $article = Category::create(['name' => 'Bodys'])->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74']);
+        $this->get(route('articles.edit', $article))->assertOk()->assertDontSee(['Titel vorschlagen', 'aiSuggest(']);
 
         $this->postJson(route('articles.ai-suggest'), ['mode' => 'title', 'images' => [UploadedFile::fake()->image('a.jpg')]])
             ->assertStatus(503)->assertJson(['message' => 'Die KI ist nicht eingerichtet (ANTHROPIC_API_KEY fehlt).']);
