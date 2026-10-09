@@ -38,6 +38,15 @@
                     <dd class="text-gray-900">{{ $article->condition?->label() ?? '–' }}</dd>
                     <dt class="text-gray-500">Preis</dt>
                     <dd class="text-gray-900 font-semibold">{{ $article->formattedPrice() ?? '–' }}</dd>
+                    <dt class="text-gray-500">Vinted</dt>
+                    <dd class="text-gray-900">
+                        @if ($article->vinted_url)
+                            <a href="{{ $article->vinted_url }}" target="_blank" rel="noopener noreferrer"
+                               class="text-teal-700 underline hover:text-teal-900">Auf Vinted ansehen</a>
+                        @else
+                            –
+                        @endif
+                    </dd>
                     <dt class="text-gray-500">Angelegt</dt>
                     <dd class="text-gray-900">{{ $article->created_at->format('d.m.Y H:i') }}</dd>
 

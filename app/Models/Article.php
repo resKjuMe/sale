@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 class Article extends Model
 {
     protected $fillable = [
-        'image_path', 'title', 'brand', 'size', 'condition', 'price',
+        'image_path', 'title', 'brand', 'size', 'condition', 'price', 'vinted_url',
         'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipped', 'tracking_code',
     ];
 

@@ -72,6 +72,16 @@
                                           placeholder="0,00" />
                             <x-input-error :messages="$errors->get('price')" class="mt-2" />
                         </div>
+
+                        @if ($article->exists)
+                            <div class="sm:col-span-2">
+                                <x-input-label for="vinted_url" value="Vinted-Link (optional)" />
+                                <x-text-input id="vinted_url" name="vinted_url" type="url" inputmode="url" class="mt-1 block w-full"
+                                              :value="old('vinted_url', $article->vinted_url)"
+                                              placeholder="https://www.vinted.de/items/…" />
+                                <x-input-error :messages="$errors->get('vinted_url')" class="mt-2" />
+                            </div>
+                        @endif
                     </div>
 
                     @if ($article->exists)

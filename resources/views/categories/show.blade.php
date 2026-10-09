@@ -81,6 +81,9 @@
                                 @if ($article->sold)
                                     <x-sale-badge :article="$article" class="absolute left-2 top-2" />
                                 @endif
+                                @if ($article->vinted_url)
+                                    <span class="absolute bottom-2 right-2 rounded-full bg-teal-600 px-2 py-0.5 text-xs font-semibold text-white" title="Auf Vinted eingestellt">Vinted</span>
+                                @endif
                             </div>
                             <div class="p-3">
                                 <div class="font-medium text-gray-900 truncate">{{ $article->displayTitle() }}</div>

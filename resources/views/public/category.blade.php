@@ -46,6 +46,10 @@
                                     <span @class(['shrink-0 font-semibold', 'text-gray-900' => ! $article->sold, 'line-through' => $article->sold])>{{ $article->formattedPrice() }}</span>
                                 @endif
                             </div>
+                            @if ($article->vinted_url && ! $article->sold)
+                                <a href="{{ $article->vinted_url }}" target="_blank" rel="noopener noreferrer"
+                                   class="mt-2 block rounded-md bg-teal-600 py-1.5 text-center text-xs font-semibold text-white hover:bg-teal-700">Auf Vinted ansehen</a>
+                            @endif
                         </figcaption>
                     </figure>
                 @endforeach

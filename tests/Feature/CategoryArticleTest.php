@@ -294,6 +294,41 @@ class CategoryArticleTest extends TestCase
         $this->assertNull($article->fresh()->tracking_code);
     }
 
+    public function test_vinted_url_is_saved_and_marked_in_lists(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+        $article = $category->articles()->create(['image_path' => 'articles/x.jpg', 'brand' => 'Nike', 'size' => '42']);
+        $url = 'https://www.vinted.de/items/1234567-nike-schuhe';
+
+        $this->get(route('categories.show', $category))->assertDontSee('>Vinted<', false);
+        $this->get(route('categories.articles.create', $category))->assertDontSee('vinted_url');
+        $this->get(route('articles.edit', $article))->assertSee('vinted_url');
+
+        $this->put(route('articles.update', $article), ['brand' => 'Nike', 'size' => '42', 'vinted_url' => $url])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($url, $article->fresh()->vinted_url);
+        $this->get(route('categories.show', $category))->assertSee('>Vinted<', false);
+        $this->get(route('articles.show', $article))->assertSee($url, false);
+        $this->get($category->publicUrl())->assertSee($url, false)->assertSee('Auf Vinted ansehen');
+    }
+
+    public function test_vinted_url_must_point_to_vinted(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+        $article = $category->articles()->create(['image_path' => 'articles/x.jpg', 'brand' => 'Nike', 'size' => '42']);
+
+        foreach (['https://example.com/items/1', 'https://vinted.de.evil.com/items/1', 'http://www.vinted.de/items/1', 'javascript:alert(1)'] as $url) {
+            $this->put(route('articles.update', $article), ['brand' => 'Nike', 'size' => '42', 'vinted_url' => $url])
+                ->assertSessionHasErrors('vinted_url');
+        }
+
+        foreach (['https://vinted.de/items/1', 'https://www.vinted.co.uk/items/1', 'https://www.vinted.com/items/1'] as $url) {
+            $this->put(route('articles.update', $article), ['brand' => 'Nike', 'size' => '42', 'vinted_url' => $url])
+                ->assertSessionHasNoErrors();
+        }
+    }
+
     public function test_image_brand_and_size_are_required(): void
     {
         $category = Category::create(['name' => 'Schuhe']);
