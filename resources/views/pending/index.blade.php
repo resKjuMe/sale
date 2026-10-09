@@ -12,6 +12,9 @@
                 </span>
             @endif
         </div>
+        @if ($hint)
+            <p class="mt-1 text-sm text-gray-500">{{ $hint }}</p>
+        @endif
     </x-slot>
 
     <div class="py-8 sm:py-12">
@@ -19,8 +22,8 @@
             <div class="px-4 sm:px-0"><x-undo-flash /></div>
 
             <div class="px-4 sm:px-0">
-            <x-dashboard-list title="Älteste zuerst" accent="amber"
-                              :mark="$type === 'zahlung' ? 'paid' : 'shipped'" :articles="$articles" :empty="$empty" />
+            <x-dashboard-list :title="$mark ? 'Älteste zuerst' : 'Zum Bearbeiten antippen'" accent="amber"
+                              :mark="$mark" :edit="! $mark" :articles="$articles" :empty="$empty" />
             </div>
         </div>
     </div>

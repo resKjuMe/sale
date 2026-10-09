@@ -14,17 +14,22 @@
 
             @php
                 $count = fn (int $n, string $one, string $many) => $n === 1 ? "1 $one" : "$n $many";
-                $note = fn (array $parts) => ($parts = array_filter($parts)) ? implode(' · ', $parts) : null;
+                // Hinweise auf nicht mitgezählte Verkäufe, je mit Link auf die Liste zum Nachtragen.
+                $gaps = fn (array $parts) => array_values(array_filter(array_map(
+                    fn ($text, $type) => $missing[$type] ? [$text($missing[$type]), route('pending.index', $type)] : null,
+                    $parts,
+                    array_keys($parts),
+                )));
                 $tiles = [
-                    ['Verfügbar', $stats['available'], 'von '.$stats['total'].' Artikeln', route('articles.index', ['hide_sold' => 1]), false, null],
-                    ['Verkauft', $stats['sold'], $stats['soldThisMonth'].' in diesem Monat', route('articles.index'), false, null],
+                    ['Verfügbar', $stats['available'], 'von '.$stats['total'].' Artikeln', route('articles.index', ['hide_sold' => 1]), false, []],
+                    ['Verkauft', $stats['sold'], $stats['soldThisMonth'].' in diesem Monat', route('articles.index'), false, []],
                     [
                         'Umsatz',
                         \App\Models\Article::euro($stats['revenue']),
                         'aller verkauften Artikel',
                         null,
                         false,
-                        $note([$missing['revenue'] ? $count($missing['revenue'], 'Verkauf ohne Preis', 'Verkäufe ohne Preis') : null]),
+                        $gaps(['ohne-preis' => fn ($n) => $count($n, 'Verkauf ohne Preis', 'Verkäufe ohne Preis')]),
                     ],
                     [
                         'Ø Rabatt',
@@ -32,7 +37,7 @@
                         $stats['discount'] ? 'Ø '.\App\Models\Article::euro($stats['discount']['amount']).' bei '.$count($stats['discount']['count'], 'Verkauf', 'Verkäufen') : 'noch keine Verkäufe mit Preis',
                         null,
                         false,
-                        $note([$missing['discount'] ? $count($missing['discount'], 'Verkauf ohne beide Preise', 'Verkäufe ohne beide Preise') : null]),
+                        $gaps(['ohne-preise' => fn ($n) => $count($n, 'Verkauf ohne beide Preise', 'Verkäufe ohne beide Preise')]),
                     ],
                     [
                         'Noch offen',
@@ -40,27 +45,34 @@
                         $count($paymentPendingCount, 'Zahlung ausstehend', 'Zahlungen ausstehend'),
                         route('pending.index', 'zahlung'),
                         $paymentPendingCount > 0,
-                        $note([
-                            $missing['openPrice'] ? $missing['openPrice'].' ohne Preis' : null,
-                            $missing['openShipping'] ? $missing['openShipping'].' ohne Versandkosten' : null,
+                        $gaps([
+                            'zahlung-ohne-preis' => fn ($n) => "$n ohne Preis",
+                            'ohne-versandkosten' => fn ($n) => "$n ohne Versandkosten",
                         ]),
                     ],
                 ];
             @endphp
             <div class="grid grid-cols-2 gap-3 px-4 sm:grid-cols-3 sm:px-0 lg:grid-cols-5 lg:gap-4">
-                @foreach ($tiles as [$label, $value, $hint, $href, $warn, $gap])
+                @foreach ($tiles as [$label, $value, $hint, $href, $warn, $gaps])
                     @php($tag = $href ? 'a' : 'div')
-                    <{{ $tag }} @if ($href) href="{{ $href }}" @endif @class(['block min-w-0 rounded-lg bg-white p-4 shadow-sm transition', 'hover:shadow-md' => $href, 'col-span-2 sm:col-span-1' => $loop->last])>
-                        <div class="text-sm text-gray-500">{{ $label }}</div>
-                        <div @class(['mt-1 text-2xl font-semibold tabular-nums', 'text-amber-700' => $warn, 'text-gray-900' => ! $warn])>{{ $value }}</div>
-                        <div class="mt-0.5 truncate text-xs text-gray-500">{{ $hint }}</div>
-                        @if ($gap)
-                            <div class="mt-1 flex items-start gap-1 text-xs font-medium text-amber-700" title="Diese Artikel fehlen in der Summe.">
+                    <div @class(['flex min-w-0 flex-col rounded-lg bg-white shadow-sm transition', 'hover:shadow-md' => $href, 'col-span-2 sm:col-span-1' => $loop->last])>
+                        <{{ $tag }} @if ($href) href="{{ $href }}" @endif @class(['block p-4', 'pb-2' => $gaps])>
+                            <div class="text-sm text-gray-500">{{ $label }}</div>
+                            <div @class(['mt-1 text-2xl font-semibold tabular-nums', 'text-amber-700' => $warn, 'text-gray-900' => ! $warn])>{{ $value }}</div>
+                            <div class="mt-0.5 truncate text-xs text-gray-500">{{ $hint }}</div>
+                        </{{ $tag }}>
+                        @if ($gaps)
+                            <div class="flex items-start gap-1 px-4 pb-4 text-xs font-medium text-amber-700" title="Diese Artikel fehlen in der Summe.">
                                 <svg class="mt-px h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>
-                                <span>{{ $gap }} – nicht mitgezählt</span>
+                                <span>
+                                    @foreach ($gaps as [$text, $url])
+                                        <a href="{{ $url }}" class="underline decoration-amber-300 underline-offset-2 hover:text-amber-900 hover:decoration-amber-700">{{ $text }}</a>@if (! $loop->last) · @endif
+                                    @endforeach
+                                    – nicht mitgezählt
+                                </span>
                             </div>
                         @endif
-                    </{{ $tag }}>
+                    </div>
                 @endforeach
             </div>
 

@@ -767,9 +767,21 @@ class CategoryArticleTest extends TestCase
         ]);
 
         $this->get(route('dashboard'))->assertOk()
-            ->assertSeeInOrder(['Umsatz', '18,00 €', '2 Verkäufe ohne Preis – nicht mitgezählt'])
-            ->assertSeeInOrder(['Ø Rabatt', '3 Verkäufe ohne beide Preise – nicht mitgezählt'])
-            ->assertSeeInOrder(['Noch offen', '10,00 €', '2 ohne Preis · 2 ohne Versandkosten – nicht mitgezählt']);
+            ->assertSeeTextInOrder(['Umsatz', '18,00 €', '2 Verkäufe ohne Preis – nicht mitgezählt'])
+            ->assertSeeTextInOrder(['Ø Rabatt', '3 Verkäufe ohne beide Preise – nicht mitgezählt'])
+            ->assertSeeTextInOrder(['Noch offen', '10,00 €', '2 ohne Preis · 2 ohne Versandkosten – nicht mitgezählt']);
+
+        $this->get(route('dashboard'))->assertSee([
+            route('pending.index', 'ohne-preis'), route('pending.index', 'ohne-preise'),
+            route('pending.index', 'zahlung-ohne-preis'), route('pending.index', 'ohne-versandkosten'),
+        ]);
+
+        $withoutPrice = Article::whereNull('price')->whereNull('sale_price')->sole();
+        $this->get(route('pending.index', 'ohne-preis'))->assertOk()
+            ->assertSeeInOrder(['Verkäufe ohne Preis', '2 Artikel', 'Fehlen im Umsatz'])
+            ->assertSee(route('articles.edit', $withoutPrice))
+            ->assertDontSee(route('articles.mark', [$withoutPrice, 'paid']));
+        $this->get(route('pending.index', 'ohne-versandkosten'))->assertOk()->assertSee('2 Artikel');
 
         Article::query()->delete();
         $this->get(route('dashboard'))->assertDontSee('nicht mitgezählt');

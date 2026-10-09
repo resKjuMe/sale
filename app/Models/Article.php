@@ -69,6 +69,24 @@ class Article extends Model
         static::deleted(fn (Article $article) => Storage::disk('public')->delete($article->image_path));
     }
 
+    public function scopeSold(Builder $query): void
+    {
+        $query->where('sold', true);
+    }
+
+    // Verkaufs- oder Angebotspreis fehlt (0 € zählt als fehlend).
+    public function scopeWithoutBothPrices(Builder $query): void
+    {
+        $query->where(fn (Builder $query) => $query
+            ->whereNull('sale_price')->orWhere('sale_price', '<=', 0)->orWhereNull('price')->orWhere('price', '<=', 0));
+    }
+
+    // Versand ohne erfasste Versandkosten; Selbstabholung braucht keine.
+    public function scopeWithoutShippingCost(Builder $query): void
+    {
+        $query->where('pickup', false)->whereNull('shipping_cost');
+    }
+
     // Weder Verkaufs- noch Angebotspreis über 0 €.
     public function scopeWithoutPrice(Builder $query): void
     {

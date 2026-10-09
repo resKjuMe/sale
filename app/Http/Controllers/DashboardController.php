@@ -28,13 +28,9 @@ class DashboardController extends Controller
                 'soldThisMonth' => Article::where('sold', true)->where('sold_at', '>=', now()->startOfMonth())->count(),
             ],
             // Was in den Summen fehlt, weil Angaben nicht erfasst sind.
-            'missing' => [
-                'revenue' => Article::where('sold', true)->withoutPrice()->count(),
-                'discount' => Article::where('sold', true)->where(fn ($query) => $query
-                    ->whereNull('sale_price')->orWhere('sale_price', '<=', 0)->orWhereNull('price')->orWhere('price', '<=', 0))->count(),
-                'openPrice' => Article::paymentPending()->withoutPrice()->count(),
-                'openShipping' => Article::paymentPending()->where('pickup', false)->whereNull('shipping_cost')->count(),
-            ],
+            'missing' => collect(['ohne-preis', 'ohne-preise', 'zahlung-ohne-preis', 'ohne-versandkosten'])
+                ->mapWithKeys(fn (string $type) => [$type => PendingController::query($type)->count()])
+                ->all(),
             'paymentPending' => Article::paymentPending()->with('category')->orderBy('sold_at')->limit(self::LIST_LIMIT)->get(),
             'paymentPendingCount' => Article::paymentPending()->count(),
             'shippingPending' => Article::shippingPending()->with('category')->orderBy('sold_at')->limit(self::LIST_LIMIT)->get(),

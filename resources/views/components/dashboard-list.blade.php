@@ -1,4 +1,4 @@
-@props(['title', 'articles', 'count' => null, 'href' => null, 'empty', 'accent' => 'gray', 'mark' => null])
+@props(['title', 'articles', 'count' => null, 'href' => null, 'empty', 'accent' => 'gray', 'mark' => null, 'edit' => false])
 
 @php($labels = ['paid' => 'Bezahlt', 'shipped' => 'Versendet', 'picked_up' => 'Abgeholt'])
 
@@ -27,7 +27,7 @@
                 @php($flag = $mark === 'shipped' && $article->pickup ? 'picked_up' : $mark)
                 @php($markLabel = $flag ? $labels[$flag] : null)
                 <li class="flex items-center transition hover:bg-gray-50">
-                    <a href="{{ route('articles.show', $article) }}" class="flex min-w-0 flex-1 items-center gap-3 py-2.5 ps-3 pe-2 sm:px-4">
+                    <a href="{{ route($edit ? 'articles.edit' : 'articles.show', $article) }}" class="flex min-w-0 flex-1 items-center gap-3 py-2.5 ps-3 pe-2 sm:px-4">
                         <img src="{{ $article->imageUrl() }}" alt="" loading="lazy" class="h-12 w-12 shrink-0 rounded-md bg-gray-100 object-cover">
                         @php($price = $article->effectiveSalePrice())
                         @php($breakdown = ((float) $article->sale_price > 0 ? 'VK ' : 'Preis ').($price ? \App\Models\Article::euro($price) : '–').($article->pickup ? ', Abholung' : ((float) $article->shipping_cost > 0 ? ' + '.$article->formattedShippingCost().' Versand' : ', ohne Versand')))

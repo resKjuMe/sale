@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Article;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -15,20 +16,32 @@ class PendingController extends Controller
 
     private const LABELS = ['paid' => 'bezahlt', 'shipped' => 'versendet', 'picked_up' => 'abgeholt'];
 
+    // mark: Schnell-Button je Zeile; ohne mark führen die Zeilen in die Bearbeitung, um Angaben nachzutragen.
     public const TYPES = [
-        'zahlung' => ['scope' => 'paymentPending', 'flag' => 'paid', 'title' => 'Zahlung ausstehend', 'empty' => 'Alle Verkäufe sind bezahlt.'],
-        'versand' => ['scope' => 'shippingPending', 'flag' => 'shipped', 'title' => 'Versand/Abholung ausstehend', 'empty' => 'Nichts zu verschicken oder abzuholen.'],
+        'zahlung' => ['scopes' => ['paymentPending'], 'mark' => 'paid', 'title' => 'Zahlung ausstehend', 'empty' => 'Alle Verkäufe sind bezahlt.'],
+        'versand' => ['scopes' => ['shippingPending'], 'mark' => 'shipped', 'title' => 'Versand/Abholung ausstehend', 'empty' => 'Nichts zu verschicken oder abzuholen.'],
+        'ohne-preis' => ['scopes' => ['sold', 'withoutPrice'], 'title' => 'Verkäufe ohne Preis', 'hint' => 'Fehlen im Umsatz – Verkaufs- oder Angebotspreis eintragen.'],
+        'ohne-preise' => ['scopes' => ['sold', 'withoutBothPrices'], 'title' => 'Verkäufe ohne beide Preise', 'hint' => 'Fehlen im Ø Rabatt – Angebots- und Verkaufspreis eintragen.'],
+        'zahlung-ohne-preis' => ['scopes' => ['paymentPending', 'withoutPrice'], 'title' => 'Offene Zahlungen ohne Preis', 'hint' => 'Fehlen in „Noch offen" – Verkaufs- oder Angebotspreis eintragen.'],
+        'ohne-versandkosten' => ['scopes' => ['paymentPending', 'withoutShippingCost'], 'title' => 'Offene Zahlungen ohne Versandkosten', 'hint' => 'Fehlen in „Noch offen" – Versandkosten eintragen oder Selbstabholung wählen.'],
     ];
+
+    public static function query(string $type): Builder
+    {
+        return array_reduce(self::TYPES[$type]['scopes'], fn (Builder $query, string $scope) => $query->{$scope}(), Article::query());
+    }
 
     public function index(string $type): View
     {
         $config = self::TYPES[$type];
-        $articles = Article::query()->{$config['scope']}()->with('category')->orderBy('sold_at')->get();
+        $articles = self::query($type)->with('category')->orderBy('sold_at')->get();
 
         return view('pending.index', [
             'type' => $type,
             'title' => $config['title'],
-            'empty' => $config['empty'],
+            'hint' => $config['hint'] ?? null,
+            'mark' => $config['mark'] ?? null,
+            'empty' => $config['empty'] ?? 'Hier fehlt nichts mehr.',
             'articles' => $articles,
             'sum' => $articles->sum(fn (Article $article) => $article->amountDue()),
         ]);
