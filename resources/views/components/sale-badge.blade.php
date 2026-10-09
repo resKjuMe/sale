@@ -8,7 +8,11 @@
         @else
             <span class="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">Offen</span>
         @endif
-        @if ($article->shipped)
+        @if ($article->pickup && $article->picked_up)
+            <span class="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">Abgeholt</span>
+        @elseif ($article->pickup)
+            <span class="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700">Abholung</span>
+        @elseif ($article->shipped)
             <span class="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">Versendet</span>
         @endif
     </span>

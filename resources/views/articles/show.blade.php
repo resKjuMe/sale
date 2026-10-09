@@ -84,9 +84,16 @@
                         <dd class="font-semibold text-gray-900">{{ $article->formattedSalePrice() ?? '–' }}</dd>
                         <dt class="text-gray-500">Versandkosten</dt>
                         <dd class="text-gray-900">{{ $article->formattedShippingCost() ?? '–' }}</dd>
-                        <dt class="text-gray-500">Versand</dt>
+                        <dt class="text-gray-500">{{ $article->pickup ? 'Übergabe' : 'Versand' }}</dt>
                         <dd class="text-gray-900">
-                            @if ($article->shipped)
+                            @if ($article->pickup)
+                                Selbstabholung ·
+                                @if ($article->picked_up)
+                                    abgeholt{{ $article->picked_up_at ? ' am '.$article->statusDate('picked_up') : '' }}
+                                @else
+                                    <span class="font-medium text-amber-700">noch nicht abgeholt</span>
+                                @endif
+                            @elseif ($article->shipped)
                                 Versendet{{ $article->shipped_at ? ' am '.$article->statusDate('shipped') : '' }}
                                 @if ($article->tracking_code)
                                     · <a href="{{ $article->trackingUrl() }}" target="_blank" rel="noopener"

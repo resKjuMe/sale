@@ -86,7 +86,7 @@
 
                     @if ($article->exists)
                         <div class="space-y-4 border-t border-gray-200 pt-6"
-                             x-data="{ sold: @js((bool) old('sold', $article->sold)), paid: @js((bool) old('paid', $article->paid)), shipped: @js((bool) old('shipped', $article->shipped)) }">
+                             x-data="{ sold: @js((bool) old('sold', $article->sold)), paid: @js((bool) old('paid', $article->paid)), shipped: @js((bool) old('shipped', $article->shipped)), pickup: @js((bool) old('pickup', $article->pickup)), picked_up: @js((bool) old('picked_up', $article->picked_up)) }">
                             <x-toggle name="sold" label="Verkauft" model="sold" />
 
                             <div x-show="sold" x-cloak class="grid gap-4 rounded-md bg-gray-50 p-4 sm:grid-cols-2">
@@ -112,17 +112,23 @@
                                 <div class="flex items-end pb-2">
                                     <x-toggle name="paid" label="Bezahlt" model="paid" />
                                 </div>
-                                <div>
+                                <div x-show="! pickup">
                                     <x-input-label for="shipping_cost" value="Versandkosten in €" />
                                     <x-text-input id="shipping_cost" name="shipping_cost" type="text" inputmode="decimal" class="mt-1 block w-full"
                                                   :value="old('shipping_cost', $article->shipping_cost !== null ? str_replace('.', ',', $article->shipping_cost) : null)"
                                                   placeholder="0,00" />
                                     <x-input-error :messages="$errors->get('shipping_cost')" class="mt-2" />
                                 </div>
-                                <div class="sm:col-span-2 border-t border-gray-200 pt-4">
-                                    <x-toggle name="shipped" label="Versendet" model="shipped" />
+                                <div class="sm:col-span-2 flex flex-wrap gap-x-8 gap-y-3 border-t border-gray-200 pt-4">
+                                    <x-toggle name="pickup" label="Selbstabholung" model="pickup" />
+                                    <div x-show="! pickup">
+                                        <x-toggle name="shipped" label="Versendet" model="shipped" />
+                                    </div>
+                                    <div x-show="pickup" x-cloak>
+                                        <x-toggle name="picked_up" label="Abgeholt" model="picked_up" />
+                                    </div>
                                 </div>
-                                <div x-show="shipped" x-cloak class="sm:col-span-2">
+                                <div x-show="shipped && ! pickup" x-cloak class="sm:col-span-2">
                                     <x-input-label for="tracking_code" value="DHL-Sendungsnummer (optional)" />
                                     <x-text-input id="tracking_code" name="tracking_code" type="text" class="mt-1 block w-full font-mono"
                                                   autocomplete="off" autocapitalize="characters"

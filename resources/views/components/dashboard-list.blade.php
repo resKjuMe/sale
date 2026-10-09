@@ -1,6 +1,6 @@
 @props(['title', 'articles', 'count' => null, 'href' => null, 'empty', 'accent' => 'gray', 'mark' => null])
 
-@php($markLabel = match ($mark) { 'paid' => 'Bezahlt', 'shipped' => 'Versendet', default => null })
+@php($labels = ['paid' => 'Bezahlt', 'shipped' => 'Versendet', 'picked_up' => 'Abgeholt'])
 
 <section class="flex flex-col bg-white shadow-sm sm:rounded-lg">
     <header class="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
@@ -24,14 +24,19 @@
     @else
         <ul class="divide-y divide-gray-100">
             @foreach ($articles as $article)
+                @php($flag = $mark === 'shipped' && $article->pickup ? 'picked_up' : $mark)
+                @php($markLabel = $flag ? $labels[$flag] : null)
                 <li class="flex items-center transition hover:bg-gray-50">
-                    <a href="{{ route('articles.show', $article) }}" class="flex min-w-0 flex-1 items-center gap-3 py-2.5 ps-4 {{ $markLabel ? 'pe-2' : 'pe-4' }}">
+                    <a href="{{ route('articles.show', $article) }}" class="flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5">
                         <img src="{{ $article->imageUrl() }}" alt="" loading="lazy" class="h-12 w-12 shrink-0 rounded-md bg-gray-100 object-cover">
                         <div class="min-w-0 flex-1">
                             <div class="truncate text-sm font-medium text-gray-900">{{ $article->displayTitle() }}</div>
                             <div class="truncate text-xs text-gray-500">
                                 {{ $article->buyer_name ? 'an '.$article->buyer_name : $article->category->name }}
                                 · {{ $article->brand }} · Gr. {{ $article->size }}
+                                @if ($mark === 'shipped' && $article->pickup)
+                                    · <span class="font-medium text-gray-700">Selbstabholung</span>
+                                @endif
                                 @if ($mark === 'shipped' && ! $article->paid)
                                     · <span class="font-medium text-amber-700">unbezahlt</span>
                                 @endif
@@ -44,12 +49,12 @@
                         <div class="shrink-0 text-right">
                             @php($price = $article->effectiveSalePrice())
                             <div class="text-sm font-semibold tabular-nums text-gray-900">{{ $article->amountDue() > 0 ? \App\Models\Article::euro($article->amountDue()) : '–' }}</div>
-                            <div class="text-xs tabular-nums text-gray-500">{{ ((float) $article->sale_price > 0 ? 'VK ' : 'Preis ').($price ? \App\Models\Article::euro($price) : '–').((float) $article->shipping_cost > 0 ? ' + '.$article->formattedShippingCost().' Versand' : ', ohne Versand') }}</div>
+                            <div class="text-xs tabular-nums text-gray-500">{{ ((float) $article->sale_price > 0 ? 'VK ' : 'Preis ').($price ? \App\Models\Article::euro($price) : '–').($article->pickup ? ', Abholung' : ((float) $article->shipping_cost > 0 ? ' + '.$article->formattedShippingCost().' Versand' : ', ohne Versand')) }}</div>
                             <x-price-difference :article="$article" />
                         </div>
                     </a>
                     @if ($markLabel)
-                        <form method="POST" action="{{ route('articles.mark', [$article, $mark]) }}" class="shrink-0 pe-4">
+                        <form method="POST" action="{{ route('articles.mark', [$article, $flag]) }}" class="shrink-0 ps-2 pe-4">
                             @csrf
                             @method('PATCH')
                             <button class="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:border-green-600 hover:bg-green-50 hover:text-green-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500"

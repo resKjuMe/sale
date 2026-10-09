@@ -10,7 +10,7 @@ class PendingController extends Controller
 {
     public const TYPES = [
         'zahlung' => ['scope' => 'paymentPending', 'flag' => 'paid', 'title' => 'Zahlung ausstehend', 'empty' => 'Alle Verkäufe sind bezahlt.'],
-        'versand' => ['scope' => 'shippingPending', 'flag' => 'shipped', 'title' => 'Versand ausstehend', 'empty' => 'Nichts zu verschicken.'],
+        'versand' => ['scope' => 'shippingPending', 'flag' => 'shipped', 'title' => 'Versand/Abholung ausstehend', 'empty' => 'Nichts zu verschicken oder abzuholen.'],
     ];
 
     public function index(string $type): View
@@ -30,9 +30,10 @@ class PendingController extends Controller
     public function mark(Article $article, string $flag): RedirectResponse
     {
         abort_unless($article->sold, 422, 'Der Artikel ist nicht verkauft.');
+        abort_if($flag !== 'paid' && ($flag === 'picked_up') !== $article->pickup, 422, 'Passt nicht zur Übergabeart.');
         $article->update([$flag => true]);
 
-        $label = $flag === 'paid' ? 'bezahlt' : 'versendet';
+        $label = ['paid' => 'bezahlt', 'shipped' => 'versendet', 'picked_up' => 'abgeholt'][$flag];
 
         return back()->with('status', "„{$article->displayTitle()}“ als $label markiert.");
     }

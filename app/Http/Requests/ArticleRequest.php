@@ -31,6 +31,8 @@ class ArticleRequest extends FormRequest
             'sale_price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'shipping_cost' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'shipped' => ['sometimes', 'boolean'],
+            'pickup' => ['sometimes', 'boolean'],
+            'picked_up' => ['sometimes', 'boolean'],
             'tracking_code' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9]+$/'],
         ];
     }
@@ -52,6 +54,8 @@ class ArticleRequest extends FormRequest
             'sale_price' => 'Verkaufspreis',
             'shipping_cost' => 'Versandkosten',
             'shipped' => 'Versendet',
+            'pickup' => 'Selbstabholung',
+            'picked_up' => 'Abgeholt',
             'tracking_code' => 'DHL-Sendungsnummer',
         ];
     }
@@ -62,6 +66,13 @@ class ArticleRequest extends FormRequest
 
         if (array_key_exists('sold', $data) && ! $data['sold']) {
             $data = array_merge($data, Article::UNSOLD_RESET);
+        }
+
+        // Selbstabholung ersetzt den Versand.
+        if (! empty($data['pickup'])) {
+            $data = array_merge($data, ['shipped' => false, 'tracking_code' => null, 'shipping_cost' => null]);
+        } elseif (array_key_exists('pickup', $data)) {
+            $data['picked_up'] = false;
         }
 
         if (array_key_exists('shipped', $data) && ! $data['shipped']) {

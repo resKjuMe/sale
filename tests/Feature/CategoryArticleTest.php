@@ -528,7 +528,7 @@ class CategoryArticleTest extends TestCase
         $category->articles()->create(['image_path' => 'articles/c.jpg', 'title' => 'Bezahlt nicht versendet', 'brand' => 'Zara', 'size' => '74', 'sold' => true, 'paid' => true]);
         $category->articles()->create(['image_path' => 'articles/d.jpg', 'title' => 'Erledigt', 'brand' => 'Zara', 'size' => '74', 'sold' => true, 'paid' => true, 'shipped' => true]);
 
-        $this->get(route('articles.index'))->assertSeeInOrder(['Zahlung ausstehend', '2', 'Versand ausstehend', '3']);
+        $this->get(route('articles.index'))->assertSeeInOrder(['Zahlung ausstehend', '2', 'Versand/Abholung ausstehend', '3']);
         $this->get(route('articles.index', ['pending' => ['payment']]))
             ->assertSeeInOrder(['Alt offen', 'Neu offen'])->assertDontSee(['Bezahlt nicht versendet', 'Erledigt']);
         $this->get(route('categories.show', [$category, 'pending' => ['shipping']]))
@@ -599,7 +599,7 @@ class CategoryArticleTest extends TestCase
             ->assertSeeInOrder(['Umsatz', '20,50 €'])
             ->assertSeeInOrder(['Noch offen', '8,00 €', '1 Zahlung ausstehend'])
             ->assertSeeInOrder(['Zahlung ausstehend', 'Body unbezahlt', 'an Erika', 'seit 10 Tagen'])
-            ->assertSeeInOrder(['Versand ausstehend', 'Body unbezahlt', 'Hose bezahlt', 'seit 2 Tagen'])
+            ->assertSeeInOrder(['Versand/Abholung ausstehend', 'Body unbezahlt', 'Hose bezahlt', 'seit 2 Tagen'])
             ->assertSeeInOrder(['Zuletzt verkauft', 'Hose bezahlt', 'Body unbezahlt'])
             ->assertSeeInOrder(['Kategorien', 'Bodys', '1 von 2 verfügbar', 'Hosen', '0 von 1 verfügbar'])
             ->assertDontSee('Body frei');
@@ -671,7 +671,7 @@ class CategoryArticleTest extends TestCase
 
         $this->get(route('dashboard'))
             ->assertSeeInOrder(['Zahlung ausstehend', 'Mit Rabatt', '12,50 €', 'VK 8,00 € + 4,50 € Versand', '−2,00 €'])
-            ->assertSeeInOrder(['Versand ausstehend', 'Mit Rabatt', '12,50 €', 'Teurer', '11,00 €', 'VK 11,00 €, ohne Versand', '+1,00 €'])
+            ->assertSeeInOrder(['Versand/Abholung ausstehend', 'Mit Rabatt', '12,50 €', 'Teurer', '11,00 €', 'VK 11,00 €, ohne Versand', '+1,00 €'])
             ->assertSeeInOrder(['Zuletzt verkauft', 'Gleich', '6,00 €', 'VK 6,00 €, ohne Versand']);
     }
 
@@ -713,7 +713,46 @@ class CategoryArticleTest extends TestCase
             ->assertDontSee('Offen 7')
             ->assertSee(route('articles.mark', [Article::firstWhere('title', 'Offen 6'), 'paid']));
         $this->get(route('pending.index', 'versand'))->assertOk()
-            ->assertSeeInOrder(['Versand ausstehend', '7 Artikel', 'Offen 1', 'unbezahlt', 'Offen 7']);
+            ->assertSeeInOrder(['Versand/Abholung ausstehend', '7 Artikel', 'Offen 1', 'unbezahlt', 'Offen 7']);
         $this->get('/offen/irgendwas')->assertNotFound();
+    }
+
+    public function test_pickup_replaces_shipping_and_can_be_marked_as_picked_up(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $article = $category->articles()->create(['image_path' => 'articles/a.jpg', 'title' => 'Abholbody', 'brand' => 'Zara', 'size' => '74']);
+
+        $this->get(route('articles.edit', $article))->assertSee(['Selbstabholung', 'Abgeholt']);
+        $this->put(route('articles.update', $article), [
+            'brand' => 'Zara', 'size' => '74', 'sold' => '1', 'sale_price' => '8',
+            'shipping_cost' => '4,99', 'shipped' => '1', 'tracking_code' => 'ABC123', 'pickup' => '1', 'picked_up' => '0',
+        ])->assertSessionHasNoErrors();
+
+        $article->refresh();
+        $this->assertTrue($article->pickup);
+        $this->assertFalse($article->shipped);
+        $this->assertNull($article->tracking_code);
+        $this->assertNull($article->shipping_cost);
+        $this->get(route('articles.show', $article))->assertSee(['Selbstabholung', 'noch nicht abgeholt', 'Abholung']);
+
+        $this->get(route('dashboard'))
+            ->assertSeeInOrder(['Versand/Abholung ausstehend', 'Abholbody', 'Selbstabholung', 'VK 8,00 €, Abholung'])
+            ->assertSee(route('articles.mark', [$article, 'picked_up']))
+            ->assertDontSee(route('articles.mark', [$article, 'shipped']));
+
+        $this->patch(route('articles.mark', [$article, 'shipped']))->assertStatus(422);
+        $this->from(route('dashboard'))->patch(route('articles.mark', [$article, 'picked_up']))
+            ->assertSessionHas('status', '„Abholbody“ als abgeholt markiert.');
+        $article->refresh();
+        $this->assertTrue($article->picked_up);
+        $this->assertNotNull($article->picked_up_at);
+        $this->assertSame(0, Article::shippingPending()->count());
+        $this->get(route('articles.show', $article))->assertSee('abgeholt am');
+
+        $this->put(route('articles.update', $article), ['brand' => 'Zara', 'size' => '74', 'sold' => '1', 'pickup' => '0', 'picked_up' => '1']);
+        $article->refresh();
+        $this->assertFalse($article->picked_up);
+        $this->assertNull($article->picked_up_at);
+        $this->assertSame(1, Article::shippingPending()->count());
     }
 }

@@ -23,7 +23,7 @@ class ArticleFilter
         public readonly array $pending = [],
     ) {}
 
-    public const PENDING = ['payment' => 'Zahlung ausstehend', 'shipping' => 'Versand ausstehend'];
+    public const PENDING = ['payment' => 'Zahlung ausstehend', 'shipping' => 'Versand/Abholung ausstehend'];
 
     public static function fromRequest(Request $request, bool $internal = true): self
     {
@@ -43,9 +43,9 @@ class ArticleFilter
             ->when($this->brands, fn (Builder $query) => $query->whereIn('brand', $this->brands))
             ->when($this->hideSold, fn (Builder $query) => $query->where('sold', false))
             ->when($this->categories, fn (Builder $query) => $query->whereIn('category_id', $this->categories))
-            ->when($this->pending, fn (Builder $query) => $query->where('sold', true)->where(function (Builder $query) {
+            ->when($this->pending, fn (Builder $query) => $query->where(function (Builder $query) {
                 foreach ($this->pending as $pending) {
-                    $query->orWhere($pending === 'payment' ? 'paid' : 'shipped', false);
+                    $query->orWhere(fn (Builder $query) => $pending === 'payment' ? $query->paymentPending() : $query->shippingPending());
                 }
             }));
     }

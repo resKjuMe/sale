@@ -30,7 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::post('articles/public-link', [ArticleController::class, 'regeneratePublicLink'])->name('articles.public-link');
     Route::resource('categories.articles', ArticleController::class)->shallow()->except('index');
     Route::patch('articles/{article}/sold', [ArticleController::class, 'sold'])->name('articles.sold');
-    Route::patch('articles/{article}/mark/{flag}', [PendingController::class, 'mark'])->whereIn('flag', ['paid', 'shipped'])->name('articles.mark');
+    Route::patch('articles/{article}/mark/{flag}', [PendingController::class, 'mark'])->whereIn('flag', ['paid', 'shipped', 'picked_up'])->name('articles.mark');
     Route::get('offen/{type}', [PendingController::class, 'index'])->whereIn('type', array_keys(PendingController::TYPES))->name('pending.index');
 });
 

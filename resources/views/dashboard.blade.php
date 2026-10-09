@@ -41,8 +41,8 @@
             <div class="grid gap-6 lg:grid-cols-2">
                 <x-dashboard-list title="Zahlung ausstehend" accent="amber" mark="paid" :articles="$paymentPending" :count="$paymentPendingCount"
                                   :href="route('pending.index', 'zahlung')" empty="Alle Verkäufe sind bezahlt." />
-                <x-dashboard-list title="Versand ausstehend" accent="amber" mark="shipped" :articles="$shippingPending" :count="$shippingPendingCount"
-                                  :href="route('pending.index', 'versand')" empty="Nichts zu verschicken." />
+                <x-dashboard-list title="Versand/Abholung ausstehend" accent="amber" mark="shipped" :articles="$shippingPending" :count="$shippingPendingCount"
+                                  :href="route('pending.index', 'versand')" empty="Nichts zu verschicken oder abzuholen." />
                 <x-dashboard-list title="Zuletzt verkauft" :articles="$recentlySold" empty="Noch nichts verkauft." />
 
                 <section class="flex flex-col bg-white shadow-sm sm:rounded-lg">

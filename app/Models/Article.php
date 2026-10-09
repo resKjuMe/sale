@@ -12,10 +12,10 @@ class Article extends Model
 {
     protected $fillable = [
         'image_path', 'title', 'brand', 'size', 'condition', 'price', 'vinted_url',
-        'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipping_cost', 'shipped', 'tracking_code',
+        'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipping_cost', 'pickup', 'picked_up', 'shipped', 'tracking_code',
     ];
 
-    public const STATUS_FLAGS = ['sold', 'paid', 'shipped'];
+    public const STATUS_FLAGS = ['sold', 'paid', 'shipped', 'picked_up'];
 
     public const UNSOLD_RESET = [
         'buyer_name' => null,
@@ -23,6 +23,8 @@ class Article extends Model
         'paid' => false,
         'sale_price' => null,
         'shipping_cost' => null,
+        'pickup' => false,
+        'picked_up' => false,
         'shipped' => false,
         'tracking_code' => null,
     ];
@@ -31,6 +33,8 @@ class Article extends Model
         'sold' => false,
         'paid' => false,
         'shipped' => false,
+        'pickup' => false,
+        'picked_up' => false,
     ];
 
     protected function casts(): array
@@ -46,6 +50,9 @@ class Article extends Model
             'shipping_cost' => 'decimal:2',
             'shipped' => 'boolean',
             'shipped_at' => 'datetime',
+            'pickup' => 'boolean',
+            'picked_up' => 'boolean',
+            'picked_up_at' => 'datetime',
         ];
     }
 
@@ -67,9 +74,17 @@ class Article extends Model
         $query->where('sold', true)->where('paid', false);
     }
 
+    // Noch zu übergeben: Versand offen oder Selbstabholung noch nicht abgeholt.
     public function scopeShippingPending(Builder $query): void
     {
-        $query->where('sold', true)->where('shipped', false);
+        $query->where('sold', true)->where(fn (Builder $query) => $query
+            ->where(fn (Builder $query) => $query->where('pickup', false)->where('shipped', false))
+            ->orWhere(fn (Builder $query) => $query->where('pickup', true)->where('picked_up', false)));
+    }
+
+    public function handedOver(): bool
+    {
+        return $this->pickup ? $this->picked_up : $this->shipped;
     }
 
     public function category(): BelongsTo
@@ -166,7 +181,7 @@ class Article extends Model
     public function hasSaleDetails(): bool
     {
         return $this->buyer_name !== null || $this->buyer_address !== null || $this->sale_price !== null || $this->shipping_cost !== null
-            || $this->paid || $this->shipped || $this->tracking_code !== null;
+            || $this->paid || $this->shipped || $this->tracking_code !== null || $this->pickup || $this->picked_up;
     }
 
     public function trackingUrl(): ?string
