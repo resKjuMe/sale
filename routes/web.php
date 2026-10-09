@@ -2,17 +2,14 @@
 
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicCategoryController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::redirect('/', '/dashboard');
 
-Route::get('/dashboard', function () {
-    return redirect()->route('categories.index');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('p/alle/{token}', [PublicCategoryController::class, 'overview'])->name('public.overview');
 Route::get('p/{category:public_token}', [PublicCategoryController::class, 'show'])->name('public.category');

@@ -580,4 +580,29 @@ class CategoryArticleTest extends TestCase
         $this->actingAs($user)->post(route('articles.public-link'))->assertRedirect(route('articles.index'));
         $this->get($url)->assertNotFound();
     }
+
+    public function test_dashboard_shows_stats_pending_lists_and_categories(): void
+    {
+        $this->travelTo(now()->setDateTime(2026, 10, 5, 12, 0));
+        $bodys = Category::create(['name' => 'Bodys']);
+        $hosen = Category::create(['name' => 'Hosen']);
+        $bodys->articles()->create(['image_path' => 'articles/a.jpg', 'title' => 'Body frei', 'brand' => 'Zara', 'size' => '74', 'price' => 5]);
+        $this->travel(-10)->days();
+        $unpaid = $bodys->articles()->create(['image_path' => 'articles/b.jpg', 'title' => 'Body unbezahlt', 'brand' => 'Zara', 'size' => '74', 'price' => 8, 'sold' => true, 'buyer_name' => 'Erika']);
+        $this->travel(8)->days();
+        $hosen->articles()->create(['image_path' => 'articles/c.jpg', 'title' => 'Hose bezahlt', 'brand' => 'H&M', 'size' => '80', 'sold' => true, 'paid' => true, 'sale_price' => 12.5]);
+        $this->travel(2)->days();
+
+        $this->get(route('dashboard'))->assertOk()
+            ->assertSeeInOrder(['Verfügbar', '1', 'von 3 Artikeln'])
+            ->assertSeeInOrder(['Verkauft', '2', '1 in diesem Monat'])
+            ->assertSeeInOrder(['Umsatz', '20,50 €'])
+            ->assertSeeInOrder(['Noch offen', '8,00 €', '1 Zahlung ausstehend'])
+            ->assertSeeInOrder(['Zahlung ausstehend', 'Body unbezahlt', 'an Erika', 'seit 10 Tagen'])
+            ->assertSeeInOrder(['Versand ausstehend', 'Body unbezahlt', 'Hose bezahlt', 'seit 2 Tagen'])
+            ->assertSeeInOrder(['Zuletzt verkauft', 'Hose bezahlt', 'Body unbezahlt'])
+            ->assertSeeInOrder(['Kategorien', 'Bodys', '1 von 2 verfügbar', 'Hosen', '0 von 1 verfügbar'])
+            ->assertDontSee('Body frei');
+        $this->assertSame('2026-09-25', $unpaid->fresh()->sold_at->format('Y-m-d'));
+    }
 }

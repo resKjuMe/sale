@@ -106,6 +106,20 @@ class Article extends Model
         return $this->{"{$flag}_at"}?->timezone('Europe/Berlin')->format($format);
     }
 
+    public function soldSinceLabel(): ?string
+    {
+        if ($this->sold_at === null) {
+            return null;
+        }
+        $days = (int) $this->sold_at->copy()->timezone('Europe/Berlin')->startOfDay()->diffInDays(now('Europe/Berlin')->startOfDay());
+
+        return match ($days) {
+            0 => 'heute',
+            1 => 'seit gestern',
+            default => "seit $days Tagen",
+        };
+    }
+
     public function hasSaleDetails(): bool
     {
         return $this->buyer_name !== null || $this->buyer_address !== null || $this->sale_price !== null
@@ -119,7 +133,7 @@ class Article extends Model
             : 'https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode='.rawurlencode($this->tracking_code);
     }
 
-    private static function euro(?string $amount): ?string
+    public static function euro(string|float|null $amount): ?string
     {
         return $amount === null ? null : number_format((float) $amount, 2, ',', '.').' €';
     }
