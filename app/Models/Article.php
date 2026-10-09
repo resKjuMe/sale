@@ -14,6 +14,15 @@ class Article extends Model
         'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipped', 'tracking_code',
     ];
 
+    public const UNSOLD_RESET = [
+        'buyer_name' => null,
+        'buyer_address' => null,
+        'paid' => false,
+        'sale_price' => null,
+        'shipped' => false,
+        'tracking_code' => null,
+    ];
+
     protected $attributes = [
         'sold' => false,
         'paid' => false,
@@ -60,6 +69,17 @@ class Article extends Model
     public function formattedSalePrice(): ?string
     {
         return self::euro($this->sale_price);
+    }
+
+    public function markSold(bool $sold): void
+    {
+        $this->fill(['sold' => $sold] + ($sold ? [] : self::UNSOLD_RESET))->save();
+    }
+
+    public function hasSaleDetails(): bool
+    {
+        return $this->buyer_name !== null || $this->buyer_address !== null || $this->sale_price !== null
+            || $this->paid || $this->shipped || $this->tracking_code !== null;
     }
 
     public function trackingUrl(): ?string

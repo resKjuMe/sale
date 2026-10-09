@@ -7,6 +7,7 @@ use App\Models\Article;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -73,6 +74,17 @@ class ArticleController extends Controller
         }
 
         return redirect()->route('articles.show', $article)->with('status', 'Artikel gespeichert.');
+    }
+
+    public function sold(Request $request, Article $article): RedirectResponse|JsonResponse
+    {
+        $article->markSold($request->validate(['sold' => ['required', 'boolean']])['sold']);
+
+        if ($request->expectsJson()) {
+            return response()->json(['sold' => $article->sold]);
+        }
+
+        return back()->with('status', $article->sold ? 'Als verkauft markiert.' : 'Wieder als verfügbar markiert.');
     }
 
     public function destroy(Article $article): RedirectResponse

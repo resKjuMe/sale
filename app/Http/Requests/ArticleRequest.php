@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\ArticleCondition;
+use App\Models\Article;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -58,10 +59,7 @@ class ArticleRequest extends FormRequest
         $data = $this->safe()->except('image');
 
         if (array_key_exists('sold', $data) && ! $data['sold']) {
-            $data = array_merge($data, [
-                'buyer_name' => null, 'buyer_address' => null, 'paid' => false, 'sale_price' => null,
-                'shipped' => false, 'tracking_code' => null,
-            ]);
+            $data = array_merge($data, Article::UNSOLD_RESET);
         }
 
         if (array_key_exists('shipped', $data) && ! $data['shipped']) {

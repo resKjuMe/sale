@@ -23,6 +23,24 @@
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
             <x-flash />
 
+            <form method="POST" action="{{ route('articles.sold', $article) }}" class="mb-4 px-4 sm:px-0"
+                  @if ($article->sold && $article->hasSaleDetails())
+                      onsubmit="return confirm('Käufer, Verkaufspreis und Versanddaten werden gelöscht. Trotzdem als verfügbar markieren?')"
+                  @endif>
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="sold" value="{{ $article->sold ? 0 : 1 }}">
+                @if ($article->sold)
+                    <button class="w-full rounded-md border border-gray-300 bg-white py-3 text-base font-semibold text-gray-700 shadow-sm active:bg-gray-50 sm:w-auto sm:px-6">
+                        Wieder als verfügbar markieren
+                    </button>
+                @else
+                    <button class="w-full rounded-md bg-gray-800 py-3 text-base font-semibold text-white shadow-sm active:bg-gray-700 sm:w-auto sm:px-6">
+                        Als verkauft markieren
+                    </button>
+                @endif
+            </form>
+
             <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden md:flex">
                 <a href="{{ $article->imageUrl() }}" target="_blank" class="md:w-1/2 shrink-0">
                     <img src="{{ $article->imageUrl() }}" alt="{{ $article->displayTitle() }}" class="w-full object-contain bg-gray-100 max-h-[70vh]">

@@ -33,7 +33,7 @@ class CategoryController extends Controller
 
     public function show(Category $category): View
     {
-        $articles = $category->articles()->latest()->paginate(24);
+        $articles = $category->articles()->latest()->paginate(100);
 
         return view('categories.show', compact('category', 'articles'));
     }

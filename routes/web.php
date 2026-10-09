@@ -27,6 +27,7 @@ Route::middleware('auth')->group(function () {
     Route::get('categories/{category}/articles/quick', [ArticleController::class, 'quick'])->name('categories.articles.quick');
     Route::get('categories/{category}/articles/bulk', [ArticleController::class, 'bulk'])->name('categories.articles.bulk');
     Route::resource('categories.articles', ArticleController::class)->shallow()->except('index');
+    Route::patch('articles/{article}/sold', [ArticleController::class, 'sold'])->name('articles.sold');
 });
 
 require __DIR__.'/auth.php';

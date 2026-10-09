@@ -207,7 +207,7 @@ class CategoryArticleTest extends TestCase
         $this->assertFalse($article->paid);
         $this->assertNull($article->buyer_name);
         $this->assertNull($article->sale_price);
-        $this->get(route('categories.show', $category))->assertDontSee('Verkauft');
+        $this->get(route('categories.show', $category))->assertDontSee('&& ! changed[', false);
     }
 
     public function test_print_view_strikes_through_sold_articles(): void
@@ -327,6 +327,34 @@ class CategoryArticleTest extends TestCase
             $this->put(route('articles.update', $article), ['brand' => 'Nike', 'size' => '42', 'vinted_url' => $url])
                 ->assertSessionHasNoErrors();
         }
+    }
+
+    public function test_quick_sold_toggle_via_json_and_form(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+        $article = $category->articles()->create(['image_path' => 'articles/x.jpg', 'brand' => 'Nike', 'size' => '42']);
+
+        $this->get(route('categories.show', $category))->assertSee(['sellMode(', 'Verkauft markieren']);
+
+        $this->patchJson(route('articles.sold', $article), ['sold' => true])->assertOk()->assertJson(['sold' => true]);
+        $this->assertTrue($article->fresh()->sold);
+
+        $article->update(['buyer_name' => 'Erika', 'paid' => true, 'shipped' => true, 'tracking_code' => 'ABC1']);
+        $this->get(route('articles.show', $article))->assertSee('Wieder als verfügbar markieren');
+
+        $this->from(route('articles.show', $article))
+            ->patch(route('articles.sold', $article), ['sold' => '0'])
+            ->assertRedirect(route('articles.show', $article));
+
+        $article->refresh();
+        $this->assertFalse($article->sold);
+        $this->assertFalse($article->paid);
+        $this->assertFalse($article->shipped);
+        $this->assertNull($article->buyer_name);
+        $this->assertNull($article->tracking_code);
+        $this->get(route('articles.show', $article))->assertSee('Als verkauft markieren');
+
+        $this->patchJson(route('articles.sold', $article), [])->assertUnprocessable();
     }
 
     public function test_image_brand_and_size_are_required(): void
