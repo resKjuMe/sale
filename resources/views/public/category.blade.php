@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>{{ $category->name }}</title>
+    <title>{{ $category->name }} · {{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/live-filter.js'])
 </head>
 <body class="bg-gray-100 font-sans text-gray-900 antialiased">
