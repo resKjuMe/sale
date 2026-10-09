@@ -18,7 +18,7 @@
                     <label class="cursor-pointer">
                         <input type="checkbox" name="{{ $name }}[]" value="{{ $option }}" class="peer sr-only"
                                onchange="this.form.submit()" @checked(in_array($option, $selected, true))>
-                        <span class="inline-block rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 transition hover:border-gray-400 peer-checked:border-gray-800 peer-checked:bg-gray-800 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-gray-500">{{ $option }}<span @class(['ml-1 text-xs', 'text-gray-400' => ! in_array($option, $selected, true), 'text-gray-300' => in_array($option, $selected, true)])>{{ $count }}</span></span>
+                        <span class="inline-block rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 transition hover:border-gray-400 peer-checked:border-gray-800 peer-checked:bg-gray-800 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-gray-500">{{ $option }}<span @class(['ml-1.5 inline-block min-w-[1.25rem] rounded-full px-1.5 text-center text-xs leading-5', 'bg-gray-100 text-gray-500' => ! in_array($option, $selected, true), 'bg-white/20 text-white' => in_array($option, $selected, true)])>{{ $count }}</span></span>
                     </label>
                 @endforeach
             </div>
