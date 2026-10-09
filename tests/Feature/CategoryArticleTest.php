@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ArticleCondition;
 use App\Models\Article;
+use App\Models\Bundle;
 use App\Models\Category;
 use App\Models\User;
 use App\Services\ArticleAssistant;
@@ -903,5 +904,97 @@ class CategoryArticleTest extends TestCase
 
         [$width, $height, $type] = getimagesizefromstring($small);
         $this->assertSame([1568, 784, IMAGETYPE_JPEG], [$width, $height, $type]);
+    }
+
+    public function test_batch_edit_moves_category_and_changes_prices_of_available_articles(): void
+    {
+        $bodys = Category::create(['name' => 'Bodys']);
+        $hosen = Category::create(['name' => 'Hosen']);
+        $a = $bodys->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74', 'price' => 7.9]);
+        $b = $bodys->articles()->create(['image_path' => 'articles/b.jpg', 'brand' => 'Zara', 'size' => '74']);
+        $c = $bodys->articles()->create(['image_path' => 'articles/c.jpg', 'brand' => 'Zara', 'size' => '74', 'price' => 10, 'sold' => true]);
+        $ids = [$a->id, $b->id, $c->id];
+
+        $this->get(route('categories.show', $bodys))->assertSee(['Auswählen', 'batchUrl']);
+        $this->get(route('articles.batch.edit', ['ids' => $ids, 'back' => route('articles.index')]))->assertOk()
+            ->assertSee(['3 Artikel bearbeiten', 'In andere Kategorie verschieben', 'Preis ändern', 'Geht nur, wenn alle ausgewählten Artikel noch verfügbar sind.']);
+
+        $this->post(route('articles.batch.update'), ['ids' => $ids, 'back' => route('articles.index'), 'action' => 'price', 'mode' => 'percent', 'value' => '20', 'round' => '1'])
+            ->assertRedirect(route('articles.index'))
+            ->assertSessionHas('status', 'Preis bei 1 Artikel geändert. 2 Artikel übersprungen (verkauft oder ohne Preis).');
+        $this->assertSame('6.50', $a->fresh()->price);
+        $this->assertNull($b->fresh()->price);
+        $this->assertSame('10.00', $c->fresh()->price);
+
+        $this->post(route('articles.batch.update'), ['ids' => $ids, 'action' => 'price', 'mode' => 'set', 'value' => '4,99']);
+        $this->assertSame(['4.99', '4.99', '10.00'], [$a->fresh()->price, $b->fresh()->price, $c->fresh()->price]);
+
+        $this->post(route('articles.batch.update'), ['ids' => $ids, 'action' => 'price', 'mode' => 'percent', 'value' => '150'])->assertSessionHasErrors('value');
+
+        $this->post(route('articles.batch.update'), ['ids' => $ids, 'action' => 'category', 'category_id' => $hosen->id])
+            ->assertSessionHas('status', '3 Artikel nach „Hosen“ verschoben.');
+        $this->assertSame(3, $hosen->articles()->count());
+    }
+
+    public function test_bundle_sale_shares_buyer_status_and_is_shown_as_one_row(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $a = $category->articles()->create(['image_path' => 'articles/a.jpg', 'title' => 'Body A', 'brand' => 'Zara', 'size' => '74', 'price' => 5]);
+        $b = $category->articles()->create(['image_path' => 'articles/b.jpg', 'title' => 'Body B', 'brand' => 'Zara', 'size' => '74', 'price' => 6]);
+        $c = $category->articles()->create(['image_path' => 'articles/c.jpg', 'title' => 'Body C', 'brand' => 'Zara', 'size' => '74', 'price' => 4]);
+
+        $this->get(route('articles.batch.edit', ['ids' => [$a->id, $b->id, $c->id]]))->assertSee('Sammelverkauf anlegen');
+        $this->post(route('articles.batch.update'), [
+            'ids' => [$a->id, $b->id, $c->id], 'action' => 'bundle',
+            'buyer_name' => 'Erika', 'buyer_address' => 'Weg 1',
+            'sale_price' => [$a->id => '4,50', $b->id => '6', $c->id => ''],
+            'shipping_cost' => '5,49',
+        ])->assertSessionHas('status', 'Sammelverkauf an Erika mit 3 Artikel angelegt.');
+
+        [$a, $b, $c] = [$a->fresh(), $b->fresh(), $c->fresh()];
+        $this->assertNotNull($a->bundle_id);
+        $this->assertSame([$a->bundle_id, $a->bundle_id], [$b->bundle_id, $c->bundle_id]);
+        $this->assertSame(['4.50', '6.00', '4.00'], [$a->sale_price, $b->sale_price, $c->sale_price]);
+        $this->assertSame(['5.49', '0.00', '0.00'], [$a->shipping_cost, $b->shipping_cost, $c->shipping_cost]);
+        $this->assertTrue($a->sold && $b->sold && $c->sold && $c->buyer_name === 'Erika');
+        $this->assertSame(19.99, $a->bundle->amountDue());
+
+        $this->get(route('dashboard'))
+            ->assertSeeTextInOrder(['Zahlung ausstehend', 'Sammelverkauf', '3 Artikel', 'Body A, Body B, Body C', '19,99 €', 'VK 14,50 € + 5,49 € Versand']);
+        $this->get(route('articles.show', $b))->assertSeeTextInOrder(['Sammelverkauf', '3 Artikel, zusammen', '19,99 €', 'Body A', 'Body C']);
+
+        $this->from(route('dashboard'))->patch(route('articles.mark', [$a, 'paid']))
+            ->assertSessionHas('status', 'Sammelverkauf (Body A und 2 weitere) als bezahlt markiert.');
+        $this->assertTrue($b->fresh()->paid && $c->fresh()->paid);
+        $this->assertNotNull($c->fresh()->paid_at);
+
+        $this->put(route('articles.update', $c), ['brand' => 'Zara', 'size' => '74', 'sold' => '1', 'paid' => '1', 'shipped' => '1', 'tracking_code' => 'AB12']);
+        $this->assertSame(['AB12', 'AB12'], [$a->fresh()->tracking_code, $b->fresh()->tracking_code]);
+
+        $c->fresh()->markSold(false);
+        $this->assertNull($c->fresh()->bundle_id);
+        $this->assertTrue($a->fresh()->paid, 'Das Lösen eines Artikels ändert die übrigen nicht.');
+        $a->fresh()->markSold(false);
+        $b->fresh()->markSold(false);
+        $this->assertSame(0, Bundle::count());
+
+        $sold = $category->articles()->create(['image_path' => 'articles/d.jpg', 'brand' => 'Zara', 'size' => '74', 'sold' => true]);
+        $this->post(route('articles.batch.update'), ['ids' => [$a->id, $sold->id], 'action' => 'bundle', 'buyer_name' => 'Max'])->assertSessionHasErrors('ids');
+    }
+
+    public function test_stale_filter_lists_articles_available_for_more_than_thirty_days(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $this->travelTo(now()->subDays(45));
+        $old = $category->articles()->create(['image_path' => 'articles/a.jpg', 'title' => 'Alter Body', 'brand' => 'Zara', 'size' => '74']);
+        $category->articles()->create(['image_path' => 'articles/b.jpg', 'title' => 'Alt verkauft', 'brand' => 'Zara', 'size' => '74', 'sold' => true]);
+        $this->travelBack();
+        $category->articles()->create(['image_path' => 'articles/c.jpg', 'title' => 'Neuer Body', 'brand' => 'Zara', 'size' => '74']);
+
+        $this->assertSame(45, $old->fresh()->availableDays());
+        $this->get(route('articles.index'))->assertSeeInOrder(['Ladenhüter', '1'])->assertSee('45 Tage');
+        $this->get(route('articles.index', ['stale' => 1]))->assertSee('Alter Body')->assertDontSee(['Neuer Body', 'Alt verkauft']);
+        $this->get(route('categories.show', [$category, 'stale' => 1]))->assertSee('Alter Body')->assertDontSee('Neuer Body');
+        $this->get($category->publicUrl().'?stale=1')->assertSee('Neuer Body')->assertDontSee('Ladenhüter');
     }
 }

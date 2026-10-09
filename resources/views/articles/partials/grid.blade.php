@@ -7,6 +7,8 @@
     <div x-data="sellMode({
             sold: @js($articles->mapWithKeys(fn ($a) => [$a->id => $a->sold])),
             details: @js($articles->mapWithKeys(fn ($a) => [$a->id => $a->hasSaleDetails()])),
+            ids: @js($articles->pluck('id')),
+            batchUrl: @js(route('articles.batch.edit')),
          })"
          class="pb-24">
         <div class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -18,6 +20,7 @@
                        'ring-2 ring-gray-800': sold[{{ $article->id }}],
                        'ring-2 ring-green-500 ring-offset-2': active && ! sold[{{ $article->id }}],
                        'opacity-60': busy[{{ $article->id }}],
+                       'ring-4 ring-violet-500': selecting && selected[{{ $article->id }}],
                    }">
                     <div class="relative">
                         <img src="{{ $article->imageUrl() }}" alt="{{ $article->displayTitle() }}"
@@ -31,6 +34,16 @@
                         @endif
                         <span x-show="sold[{{ $article->id }}] && changed[{{ $article->id }}]" x-cloak
                               class="absolute left-2 top-2 rounded-full bg-gray-800 px-2 py-0.5 text-xs font-semibold text-white">Verkauft</span>
+                        @if (($days = $article->availableDays()) >= \App\Models\Article::STALE_DAYS)
+                            <span class="absolute right-2 top-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800" title="Seit {{ $days }} Tagen verfügbar">{{ $days }} Tage</span>
+                        @endif
+                        @if ($article->bundle_id)
+                            <span class="absolute right-2 top-2 rounded-full bg-violet-600 px-2 py-0.5 text-xs font-semibold text-white" title="Teil eines Sammelverkaufs">Sammel</span>
+                        @endif
+                        <div x-show="selecting" x-cloak class="absolute inset-0 flex items-start justify-end p-2" :class="selected[{{ $article->id }}] ? 'bg-violet-500/15' : ''">
+                            <span class="flex h-7 w-7 items-center justify-center rounded-full border-2 text-sm font-bold shadow"
+                                  :class="selected[{{ $article->id }}] ? 'border-violet-600 bg-violet-600 text-white' : 'border-white bg-white/80 text-transparent'">✓</span>
+                        </div>
                         @if ($article->images_count)
                             <span class="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white" title="{{ $article->images_count + 1 }} Fotos">+{{ $article->images_count }}</span>
                         @endif
@@ -69,11 +82,34 @@
 
         <div class="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
             <div class="mx-auto flex max-w-7xl items-center gap-3">
-                <template x-if="! active">
-                    <button type="button" x-on:click="setActive(true)"
-                            class="w-full rounded-md bg-gray-800 py-3 text-base font-semibold text-white active:bg-gray-700 sm:ms-auto sm:w-auto sm:px-6">
-                        Verkauft markieren
-                    </button>
+                <template x-if="! active && ! selecting">
+                    <div class="flex w-full gap-3 sm:justify-end">
+                        <button type="button" x-on:click="setSelecting(true)"
+                                class="flex-1 rounded-md border border-gray-300 bg-white py-3 text-base font-semibold text-gray-700 active:bg-gray-50 sm:flex-none sm:px-6">
+                            Auswählen
+                        </button>
+                        <button type="button" x-on:click="setActive(true)"
+                                class="flex-1 rounded-md bg-gray-800 py-3 text-base font-semibold text-white active:bg-gray-700 sm:flex-none sm:px-6">
+                            Verkauft markieren
+                        </button>
+                    </div>
+                </template>
+                <template x-if="selecting">
+                    <div class="flex w-full flex-wrap items-center gap-2 sm:gap-3">
+                        <span class="text-sm font-medium text-gray-700" x-text="selectedIds.length === 1 ? '1 ausgewählt' : `${selectedIds.length} ausgewählt`"></span>
+                        <button type="button" x-on:click="toggleAll()" class="text-sm text-gray-500 underline hover:text-gray-800"
+                                x-text="allSelected ? 'Keine auf dieser Seite' : 'Alle auf dieser Seite'"></button>
+                        <div class="ms-auto flex gap-2">
+                            <button type="button" x-on:click="setSelecting(false)"
+                                    class="rounded-md border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700 active:bg-gray-50">
+                                Abbrechen
+                            </button>
+                            <button type="button" x-on:click="openBatch()" :disabled="selectedIds.length === 0"
+                                    class="rounded-md bg-violet-600 px-5 py-3 text-base font-semibold text-white active:bg-violet-700 disabled:opacity-40">
+                                Bearbeiten
+                            </button>
+                        </div>
+                    </div>
                 </template>
                 <template x-if="active">
                     <div class="flex w-full items-center gap-3">

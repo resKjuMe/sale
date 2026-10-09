@@ -31,11 +31,11 @@ class DashboardController extends Controller
             'missing' => collect(['ohne-preis', 'ohne-preise', 'zahlung-ohne-preis', 'ohne-versandkosten'])
                 ->mapWithKeys(fn (string $type) => [$type => PendingController::query($type)->count()])
                 ->all(),
-            'paymentPending' => Article::paymentPending()->with('category')->orderBy('sold_at')->limit(self::LIST_LIMIT)->get(),
+            'paymentPending' => Article::paymentPending()->with(['category', 'bundle.articles'])->orderBy('sold_at')->limit(self::LIST_LIMIT)->get(),
             'paymentPendingCount' => Article::paymentPending()->count(),
-            'shippingPending' => Article::shippingPending()->with('category')->orderBy('sold_at')->limit(self::LIST_LIMIT)->get(),
+            'shippingPending' => Article::shippingPending()->with(['category', 'bundle.articles'])->orderBy('sold_at')->limit(self::LIST_LIMIT)->get(),
             'shippingPendingCount' => Article::shippingPending()->count(),
-            'recentlySold' => Article::where('sold', true)->with('category')->latest('sold_at')->limit(self::LIST_LIMIT)->get(),
+            'recentlySold' => Article::where('sold', true)->with(['category', 'bundle.articles'])->latest('sold_at')->limit(self::LIST_LIMIT)->get(),
             'categories' => Category::withCount(['articles', 'articles as available_count' => fn ($query) => $query->where('sold', false)])
                 ->orderBy('name')
                 ->get(),

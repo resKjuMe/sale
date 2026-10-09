@@ -82,6 +82,18 @@
                     <dt class="col-span-2 mt-3 border-t border-gray-200 pt-3 font-medium text-gray-900">Verkauf</dt>
                     <dt class="text-gray-500">Status</dt>
                     <dd><x-sale-badge :article="$article" /></dd>
+                    @if ($article->sold && $article->bundle)
+                        <dt class="text-gray-500">Sammelverkauf</dt>
+                        <dd class="text-gray-900">
+                            {{ $article->bundle->articles->count() }} Artikel, zusammen
+                            <span class="font-semibold">{{ \App\Models\Article::euro($article->bundle->amountDue()) }}</span>
+                            <div class="mt-1 flex flex-wrap gap-1.5">
+                                @foreach ($article->bundle->articles->except($article->id) as $sibling)
+                                    <a href="{{ route('articles.show', $sibling) }}" class="rounded bg-violet-50 px-1.5 py-0.5 text-xs text-violet-800 hover:bg-violet-100">{{ $sibling->displayTitle() }}</a>
+                                @endforeach
+                            </div>
+                        </dd>
+                    @endif
                     @if ($article->sold)
                         <dt class="text-gray-500">Verkauft am</dt>
                         <dd class="text-gray-900">{{ $article->statusDate('sold') ?? '–' }}</dd>

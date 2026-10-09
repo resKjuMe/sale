@@ -34,7 +34,7 @@ class PendingController extends Controller
     public function index(string $type): View
     {
         $config = self::TYPES[$type];
-        $articles = self::query($type)->with('category')->orderBy('sold_at')->get();
+        $articles = self::query($type)->with(['category', 'bundle.articles'])->orderBy('sold_at')->get();
 
         return view('pending.index', [
             'type' => $type,
@@ -52,9 +52,11 @@ class PendingController extends Controller
         abort_unless($article->sold, 422, 'Der Artikel ist nicht verkauft.');
         abort_if($flag !== 'paid' && ($flag === 'picked_up') !== $article->pickup, 422, 'Passt nicht zur Übergabeart.');
         $article->update([$flag => true]);
+        $others = $article->bundle_id ? Article::where('bundle_id', $article->bundle_id)->count() - 1 : 0;
+        $subject = $others ? "Sammelverkauf ({$article->displayTitle()} und {$others} weitere)" : "„{$article->displayTitle()}“";
 
         return back()
-            ->with('status', "„{$article->displayTitle()}“ als ".self::LABELS[$flag].' markiert.')
+            ->with('status', "$subject als ".self::LABELS[$flag].' markiert.')
             ->with('undo', ['url' => route('articles.unmark', [$article, $flag]), 'expires' => now()->addSeconds(self::UNDO_SECONDS)->getTimestamp()]);
     }
 

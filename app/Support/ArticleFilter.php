@@ -21,6 +21,7 @@ class ArticleFilter
         public readonly bool $hideSold = false,
         public readonly array $categories = [],
         public readonly array $pending = [],
+        public readonly bool $stale = false,
     ) {}
 
     public const PENDING = ['payment' => 'Zahlung ausstehend', 'shipping' => 'Versand/Abholung ausstehend'];
@@ -33,6 +34,7 @@ class ArticleFilter
             $request->boolean('hide_sold'),
             array_values(array_filter(array_map('intval', self::list($request, 'category')))),
             $internal ? array_values(array_intersect(array_keys(self::PENDING), self::list($request, 'pending'))) : [],
+            $internal && $request->boolean('stale'),
         );
     }
 
@@ -47,12 +49,13 @@ class ArticleFilter
                 foreach ($this->pending as $pending) {
                     $query->orWhere(fn (Builder $query) => $pending === 'payment' ? $query->paymentPending() : $query->shippingPending());
                 }
-            }));
+            }))
+            ->when($this->stale, fn (Builder $query) => $query->stale());
     }
 
     public function isActive(): bool
     {
-        return $this->sizes !== [] || $this->brands !== [] || $this->hideSold || $this->categories !== [] || $this->pending !== [];
+        return $this->sizes !== [] || $this->brands !== [] || $this->hideSold || $this->categories !== [] || $this->pending !== [] || $this->stale;
     }
 
     public function query(): array
@@ -63,6 +66,7 @@ class ArticleFilter
             'brand' => $this->brands,
             'hide_sold' => $this->hideSold ? 1 : null,
             'pending' => $this->pending,
+            'stale' => $this->stale ? 1 : null,
         ]);
     }
 
@@ -74,6 +78,7 @@ class ArticleFilter
             $this->hideSold,
             $key === 'category' ? [] : $this->categories,
             $key === 'pending' ? [] : $this->pending,
+            $key === 'stale' ? false : $this->stale,
         );
     }
 
@@ -99,6 +104,11 @@ class ArticleFilter
     /**
      * @return array<string, int> 'payment'/'shipping' => Anzahl unter allen übrigen Filtern
      */
+    public function staleCount(Builder $articles): int
+    {
+        return $this->without('stale')->apply(clone $articles)->stale()->count();
+    }
+
     public function pendingCounts(Builder $articles): array
     {
         $base = $this->without('pending');

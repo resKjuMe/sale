@@ -1,4 +1,4 @@
-@props(['filter', 'articles', 'withSoldToggle' => true, 'withCategories' => false, 'withPending' => false])
+@props(['filter', 'articles', 'withSoldToggle' => true, 'withCategories' => false, 'withPending' => false, 'withStale' => false])
 
 @php
     // Jede Gruppe zählt unter allen übrigen Filtern; gewählte Werte bleiben zum Abwählen sichtbar.
@@ -17,6 +17,7 @@
         'brand' => ['Marke', $facet('brand', $filter->brands), $filter->brands],
     ], fn ($group) => $group !== null && (count($group[1]) > 1 || $group[2] !== []));
     $selectedCount = count($filter->sizes) + count($filter->brands) + count($filter->categories);
+    $staleCount = $withStale ? $filter->staleCount($articles) : 0;
     $pending = $withPending
         ? array_filter($filter->pendingCounts($articles), fn ($count, $value) => $count > 0 || in_array($value, $filter->pending, true), ARRAY_FILTER_USE_BOTH)
         : [];
@@ -41,6 +42,12 @@
                             <span class="inline-block rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm text-amber-800 transition hover:border-amber-400 peer-checked:border-gray-800 peer-checked:bg-gray-800 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-gray-500">{{ \App\Support\ArticleFilter::PENDING[$value] }}<span class="ml-1.5 inline-block min-w-[1.25rem] rounded-full bg-white/70 px-1.5 text-center text-xs leading-5 [.peer:checked~*_&]:bg-white/20">{{ $count }}</span></span>
                         </label>
                     @endforeach
+                    @if ($withStale && ($staleCount > 0 || $filter->stale))
+                        <label class="cursor-pointer" title="Seit mehr als {{ \App\Models\Article::STALE_DAYS }} Tagen verfügbar">
+                            <input type="checkbox" name="stale" value="1" class="peer sr-only" @checked($filter->stale)>
+                            <span class="inline-block rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 transition hover:border-gray-400 peer-checked:border-gray-800 peer-checked:bg-gray-800 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-gray-500">Ladenhüter<span class="ml-1.5 inline-block min-w-[1.25rem] rounded-full bg-gray-100 px-1.5 text-center text-xs leading-5 text-gray-500 [.peer:checked~*_&]:bg-white/20 [.peer:checked~*_&]:text-white">{{ $staleCount }}</span></span>
+                        </label>
+                    @endif
                 </div>
             @endif
 

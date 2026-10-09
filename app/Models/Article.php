@@ -13,10 +13,17 @@ class Article extends Model
 {
     protected $fillable = [
         'image_path', 'title', 'brand', 'size', 'condition', 'price', 'vinted_url',
-        'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipping_cost', 'pickup', 'picked_up', 'shipped', 'tracking_code',
+        'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipping_cost', 'pickup', 'picked_up', 'shipped', 'tracking_code', 'bundle_id',
     ];
 
     public const MAX_EXTRA_IMAGES = 8;
+
+    public const STALE_DAYS = 30;
+
+    // Gelten für alle Artikel eines Sammelverkaufs gemeinsam.
+    public const BUNDLE_SHARED = ['buyer_name', 'buyer_address', 'paid', 'pickup', 'picked_up', 'shipped', 'tracking_code'];
+
+    private static bool $syncingBundle = false;
 
     public const STATUS_FLAGS = ['sold', 'paid', 'shipped', 'picked_up'];
 
@@ -30,6 +37,7 @@ class Article extends Model
         'picked_up' => false,
         'shipped' => false,
         'tracking_code' => null,
+        'bundle_id' => null,
     ];
 
     protected $attributes = [
@@ -70,6 +78,9 @@ class Article extends Model
             }
         });
         // Zusatzfotos einzeln löschen, damit ihre Dateien mit verschwinden (die FK-Kaskade kennt keine Dateien).
+        static::saved(function (Article $article) {
+            $article->syncBundle();
+        });
         static::deleting(fn (Article $article) => $article->images->each->delete());
         static::deleted(fn (Article $article) => Storage::disk('public')->delete($article->image_path));
     }
@@ -115,6 +126,47 @@ class Article extends Model
     public function handedOver(): bool
     {
         return $this->pickup ? $this->picked_up : $this->shipped;
+    }
+
+    public function bundle(): BelongsTo
+    {
+        return $this->belongsTo(Bundle::class);
+    }
+
+    public function scopeStale(Builder $query): void
+    {
+        $query->where('sold', false)->where('created_at', '<=', now()->subDays(self::STALE_DAYS));
+    }
+
+    public function availableDays(): ?int
+    {
+        return $this->sold ? null : (int) $this->created_at->diffInDays(now());
+    }
+
+    // Statusänderungen an einem Artikel eines Sammelverkaufs auf die übrigen übertragen.
+    private function syncBundle(): void
+    {
+        $bundleId = $this->getOriginal('bundle_id') ?? $this->bundle_id;
+        if (self::$syncingBundle || $bundleId === null) {
+            return;
+        }
+
+        self::$syncingBundle = true;
+        try {
+            if ($this->bundle_id === null) {
+                // Aus dem Sammelverkauf gelöst (z. B. wieder verfügbar); leere Bündel aufräumen.
+                Bundle::whereKey($bundleId)->whereDoesntHave('articles')->delete();
+
+                return;
+            }
+
+            $changes = array_intersect_key($this->getChanges(), array_flip(self::BUNDLE_SHARED));
+            if ($changes !== []) {
+                self::where('bundle_id', $this->bundle_id)->whereKeyNot($this->id)->get()->each->update($changes);
+            }
+        } finally {
+            self::$syncingBundle = false;
+        }
     }
 
     public function images(): HasMany
