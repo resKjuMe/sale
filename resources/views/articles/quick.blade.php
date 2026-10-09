@@ -36,6 +36,7 @@
                 <span class="text-lg font-medium">Foto aufnehmen</span>
             </label>
             <x-input-error :messages="$errors->get('image')" class="mt-2" />
+            <x-ai-suggest-buttons class="mt-3" />
 
             <div x-show="preview" x-cloak class="space-y-4">
                 <div class="relative">

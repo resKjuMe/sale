@@ -6,6 +6,7 @@ use App\Enums\ArticleCondition;
 use App\Models\Article;
 use App\Models\Category;
 use App\Models\User;
+use App\Services\ArticleAssistant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -844,5 +845,63 @@ class CategoryArticleTest extends TestCase
         $paths = $article->fresh()->images->pluck('path')->all();
         $this->delete(route('articles.destroy', $article));
         Storage::disk('public')->assertMissing($paths);
+    }
+
+    public function test_ai_suggestion_uses_uploaded_and_stored_photos_and_known_brands(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $category->articles()->create(['image_path' => 'articles/old.jpg', 'brand' => 'Petit Bateau', 'size' => '68 / 72']);
+        Storage::disk('public')->put('articles/main.jpg', UploadedFile::fake()->image('main.jpg')->getContent());
+        Storage::disk('public')->put('articles/label.jpg', UploadedFile::fake()->image('label.jpg')->getContent());
+        $article = $category->articles()->create(['image_path' => 'articles/main.jpg', 'brand' => 'x', 'size' => 'y']);
+        $article->images()->create(['path' => 'articles/label.jpg']);
+
+        $fake = new class('test-key', 'claude-opus-5-5') extends ArticleAssistant
+        {
+            public array $calls = [];
+
+            public function suggest(array $images, string $mode, array $context = []): array
+            {
+                $this->calls[] = compact('images', 'mode', 'context');
+
+                return ['brand' => 'Petit Bateau', 'size' => '74', 'title' => null];
+            }
+        };
+        $this->app->instance(ArticleAssistant::class, $fake);
+
+        $this->get(route('articles.edit', $article))->assertSee(['Marke &amp; Größe erkennen', 'Titel vorschlagen', trim(json_encode(route('articles.ai-suggest')), '"')], false);
+        $this->get(route('categories.articles.quick', $category))->assertSee('Titel vorschlagen');
+
+        $this->postJson(route('articles.ai-suggest'), [
+            'mode' => 'brand_size',
+            'article_id' => $article->id,
+            'images' => [UploadedFile::fake()->image('new.jpg')],
+        ])->assertOk()->assertExactJson(['brand' => 'Petit Bateau', 'size' => '74', 'title' => null]);
+
+        $call = $fake->calls[0];
+        $this->assertSame('brand_size', $call['mode']);
+        $this->assertCount(3, $call['images']);
+        $this->assertContains('Petit Bateau', $call['context']['brands']);
+        $this->assertSame('x', $article->fresh()->brand, 'Vorschläge werden nicht automatisch gespeichert.');
+
+        $this->postJson(route('articles.ai-suggest'), ['mode' => 'title'])->assertStatus(422);
+        $this->postJson(route('articles.ai-suggest'), ['mode' => 'quatsch', 'article_id' => $article->id])->assertJsonValidationErrors('mode');
+    }
+
+    public function test_ai_suggestion_reports_missing_api_key(): void
+    {
+        $this->app->instance(ArticleAssistant::class, new ArticleAssistant(null, 'claude-opus-5-5'));
+
+        $this->postJson(route('articles.ai-suggest'), ['mode' => 'title', 'images' => [UploadedFile::fake()->image('a.jpg')]])
+            ->assertStatus(503)->assertJson(['message' => 'Die KI ist nicht eingerichtet (ANTHROPIC_API_KEY fehlt).']);
+    }
+
+    public function test_photos_are_shrunk_to_jpeg_for_the_model(): void
+    {
+        $big = UploadedFile::fake()->image('big.png', 3000, 1500)->getContent();
+        $small = ArticleAssistant::shrink($big);
+
+        [$width, $height, $type] = getimagesizefromstring($small);
+        $this->assertSame([1568, 784, IMAGETYPE_JPEG], [$width, $height, $type]);
     }
 }

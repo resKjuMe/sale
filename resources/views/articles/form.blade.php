@@ -60,6 +60,8 @@
                         <x-input-error :messages="$errors->get('photos.*')" class="mt-2" />
                     </div>
 
+                    <x-ai-suggest-buttons :article="$article->exists ? $article : null" />
+
                     <div>
                         <x-input-label for="title" value="Titel (optional)" />
                         <x-text-input id="title" name="title" type="text" class="mt-1 block w-full"
