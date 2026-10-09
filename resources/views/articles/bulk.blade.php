@@ -5,16 +5,20 @@
     </x-slot>
 
     <div class="py-6 sm:py-12 pb-32"
-         x-data="bulkUpload({ storeUrl: @js(route('categories.articles.store', $category)), doneUrl: @js(route('categories.show', $category)) })">
+         x-data="bulkUpload({ storeUrl: @js(route('categories.articles.store', $category)), doneUrl: @js(route('categories.show', $category)) })"
+         x-on:dragover.window="dragOver($event)"
+         x-on:dragleave.window="dragLeave($event)"
+         x-on:drop.window="drop($event)">
         <div class="mx-auto max-w-4xl space-y-4 px-4 sm:px-6 lg:px-8">
 
             <label for="images"
                    class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-white px-4 py-8 text-gray-600 hover:bg-gray-50"
-                   :class="items.length ? 'py-4' : 'py-12'">
+                   :class="[items.length ? 'py-4' : 'py-12', dragging && 'border-indigo-500 bg-indigo-50 text-indigo-700']">
                 <svg class="h-10 w-10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                 </svg>
-                <span class="font-medium" x-text="items.length ? 'Weitere Bilder hinzufügen' : 'Bilder auswählen'"></span>
+                <span class="font-medium" x-text="dragging ? 'Bilder hier ablegen' : (items.length ? 'Weitere Bilder hinzufügen' : 'Bilder auswählen')"></span>
+                <span class="hidden text-xs text-gray-500 sm:block" x-show="!dragging">oder per Drag &amp; Drop hierher ziehen</span>
                 <span class="text-xs text-gray-500" x-show="!items.length">Es wird erst gespeichert, wenn du auf „Alle speichern" tippst.</span>
             </label>
             <input id="images" type="file" accept="image/*" multiple class="sr-only" x-on:change="addFiles($event)" :disabled="saving">

@@ -10,6 +10,7 @@ export default ({ storeUrl, doneUrl }) => ({
     items: [],
     defaults: { brand: '', size: '', condition: '' },
     saving: false,
+    dragging: false,
     savedCount: 0,
     leaving: false,
 
@@ -29,10 +30,40 @@ export default ({ storeUrl, doneUrl }) => ({
         return this.items.length;
     },
 
-    async addFiles(event) {
+    addFiles(event) {
         const selected = [...event.target.files];
         event.target.value = '';
+        return this.addFileList(selected);
+    },
 
+    // Drag & Drop auf die ganze Seite, damit ein Fehlwurf den Browser nicht wegnavigiert.
+    dragOver(event) {
+        if (!event.dataTransfer?.types.includes('Files')) {
+            return;
+        }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = this.saving ? 'none' : 'copy';
+        this.dragging = !this.saving;
+    },
+
+    dragLeave(event) {
+        if (!event.relatedTarget) {
+            this.dragging = false;
+        }
+    },
+
+    drop(event) {
+        if (!event.dataTransfer?.types.includes('Files')) {
+            return;
+        }
+        event.preventDefault();
+        this.dragging = false;
+        if (!this.saving) {
+            this.addFileList([...event.dataTransfer.files].filter((file) => file.type.startsWith('image/')));
+        }
+    },
+
+    async addFileList(selected) {
         const created = selected.map((file) => {
             const item = {
                 id: nextId++,
