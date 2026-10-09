@@ -27,6 +27,8 @@ class ArticleRequest extends FormRequest
             'buyer_address' => ['nullable', 'string', 'max:1000'],
             'paid' => ['sometimes', 'boolean'],
             'sale_price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'shipped' => ['sometimes', 'boolean'],
+            'tracking_code' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9]+$/'],
         ];
     }
 
@@ -44,6 +46,8 @@ class ArticleRequest extends FormRequest
             'buyer_address' => 'Adresse',
             'paid' => 'Bezahlt',
             'sale_price' => 'Verkaufspreis',
+            'shipped' => 'Versendet',
+            'tracking_code' => 'DHL-Sendungsnummer',
         ];
     }
 
@@ -52,7 +56,14 @@ class ArticleRequest extends FormRequest
         $data = $this->safe()->except('image');
 
         if (array_key_exists('sold', $data) && ! $data['sold']) {
-            $data = array_merge($data, ['buyer_name' => null, 'buyer_address' => null, 'paid' => false, 'sale_price' => null]);
+            $data = array_merge($data, [
+                'buyer_name' => null, 'buyer_address' => null, 'paid' => false, 'sale_price' => null,
+                'shipped' => false, 'tracking_code' => null,
+            ]);
+        }
+
+        if (array_key_exists('shipped', $data) && ! $data['shipped']) {
+            $data['tracking_code'] = null;
         }
 
         return $data;
@@ -64,6 +75,10 @@ class ArticleRequest extends FormRequest
             if (is_string($this->input($field))) {
                 $this->merge([$field => str_replace(',', '.', trim($this->input($field)))]);
             }
+        }
+
+        if (is_string($this->input('tracking_code'))) {
+            $this->merge(['tracking_code' => preg_replace('/\s+/', '', $this->input('tracking_code')) ?: null]);
         }
     }
 }

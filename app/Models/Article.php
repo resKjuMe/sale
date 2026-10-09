@@ -11,12 +11,13 @@ class Article extends Model
 {
     protected $fillable = [
         'image_path', 'title', 'brand', 'size', 'condition', 'price',
-        'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price',
+        'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipped', 'tracking_code',
     ];
 
     protected $attributes = [
         'sold' => false,
         'paid' => false,
+        'shipped' => false,
     ];
 
     protected function casts(): array
@@ -27,6 +28,7 @@ class Article extends Model
             'sold' => 'boolean',
             'paid' => 'boolean',
             'sale_price' => 'decimal:2',
+            'shipped' => 'boolean',
         ];
     }
 
@@ -58,6 +60,13 @@ class Article extends Model
     public function formattedSalePrice(): ?string
     {
         return self::euro($this->sale_price);
+    }
+
+    public function trackingUrl(): ?string
+    {
+        return $this->tracking_code === null
+            ? null
+            : 'https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode='.rawurlencode($this->tracking_code);
     }
 
     private static function euro(?string $amount): ?string

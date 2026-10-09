@@ -8,6 +8,9 @@
         @else
             <span class="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">Offen</span>
         @endif
+        @if ($article->shipped)
+            <span class="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">Versendet</span>
+        @endif
     </span>
 @else
     <span {{ $attributes->class('rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700') }}>Verfügbar</span>

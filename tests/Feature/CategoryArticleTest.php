@@ -255,6 +255,45 @@ class CategoryArticleTest extends TestCase
         $this->get($category->fresh()->publicUrl())->assertOk();
     }
 
+    public function test_sold_article_can_be_marked_as_shipped_with_tracking_code(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+        $article = $category->articles()->create(['image_path' => 'articles/x.jpg', 'brand' => 'Nike', 'size' => '42', 'sold' => true]);
+
+        $this->put(route('articles.update', $article), [
+            'brand' => 'Nike', 'size' => '42', 'sold' => '1', 'shipped' => '1', 'tracking_code' => ' 0034 0434 1234 ',
+        ])->assertSessionHasNoErrors();
+
+        $article->refresh();
+        $this->assertTrue($article->shipped);
+        $this->assertSame('003404341234', $article->tracking_code);
+        $this->get(route('articles.show', $article))->assertSee('piececode=003404341234', false);
+        $this->get(route('categories.show', $category))->assertSee('Versendet');
+
+        $this->put(route('articles.update', $article), ['brand' => 'Nike', 'size' => '42', 'sold' => '1', 'shipped' => '1', 'tracking_code' => ''])
+            ->assertSessionHasNoErrors();
+        $this->assertNull($article->fresh()->tracking_code);
+
+        $this->put(route('articles.update', $article), ['brand' => 'Nike', 'size' => '42', 'sold' => '1', 'shipped' => '1', 'tracking_code' => 'abc-<x>'])
+            ->assertSessionHasErrors('tracking_code');
+    }
+
+    public function test_unshipping_or_unselling_clears_tracking_code(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+        $article = $category->articles()->create([
+            'image_path' => 'articles/x.jpg', 'brand' => 'Nike', 'size' => '42', 'sold' => true, 'shipped' => true, 'tracking_code' => 'ABC123',
+        ]);
+
+        $this->put(route('articles.update', $article), ['brand' => 'Nike', 'size' => '42', 'sold' => '1', 'shipped' => '0', 'tracking_code' => 'ABC123']);
+        $this->assertNull($article->fresh()->tracking_code);
+
+        $article->update(['shipped' => true, 'tracking_code' => 'ABC123']);
+        $this->put(route('articles.update', $article), ['brand' => 'Nike', 'size' => '42', 'sold' => '0', 'shipped' => '1', 'tracking_code' => 'ABC123']);
+        $this->assertFalse($article->fresh()->shipped);
+        $this->assertNull($article->fresh()->tracking_code);
+    }
+
     public function test_image_brand_and_size_are_required(): void
     {
         $category = Category::create(['name' => 'Schuhe']);

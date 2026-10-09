@@ -76,7 +76,7 @@
 
                     @if ($article->exists)
                         <div class="space-y-4 border-t border-gray-200 pt-6"
-                             x-data="{ sold: @js((bool) old('sold', $article->sold)), paid: @js((bool) old('paid', $article->paid)) }">
+                             x-data="{ sold: @js((bool) old('sold', $article->sold)), paid: @js((bool) old('paid', $article->paid)), shipped: @js((bool) old('shipped', $article->shipped)) }">
                             <x-toggle name="sold" label="Verkauft" model="sold" />
 
                             <div x-show="sold" x-cloak class="grid gap-4 rounded-md bg-gray-50 p-4 sm:grid-cols-2">
@@ -101,6 +101,16 @@
                                 </div>
                                 <div class="flex items-end pb-2">
                                     <x-toggle name="paid" label="Bezahlt" model="paid" />
+                                </div>
+                                <div class="sm:col-span-2 border-t border-gray-200 pt-4">
+                                    <x-toggle name="shipped" label="Versendet" model="shipped" />
+                                </div>
+                                <div x-show="shipped" x-cloak class="sm:col-span-2">
+                                    <x-input-label for="tracking_code" value="DHL-Sendungsnummer (optional)" />
+                                    <x-text-input id="tracking_code" name="tracking_code" type="text" class="mt-1 block w-full font-mono"
+                                                  autocomplete="off" autocapitalize="characters"
+                                                  :value="old('tracking_code', $article->tracking_code)" />
+                                    <x-input-error :messages="$errors->get('tracking_code')" class="mt-2" />
                                 </div>
                             </div>
                         </div>

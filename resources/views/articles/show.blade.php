@@ -51,6 +51,18 @@
                         <dd class="whitespace-pre-line text-gray-900">{{ $article->buyer_address ?? '–' }}</dd>
                         <dt class="text-gray-500">Verkaufspreis</dt>
                         <dd class="font-semibold text-gray-900">{{ $article->formattedSalePrice() ?? '–' }}</dd>
+                        <dt class="text-gray-500">Versand</dt>
+                        <dd class="text-gray-900">
+                            @if ($article->shipped)
+                                Versendet
+                                @if ($article->tracking_code)
+                                    · <a href="{{ $article->trackingUrl() }}" target="_blank" rel="noopener"
+                                         class="font-mono text-indigo-600 underline hover:text-indigo-800">{{ $article->tracking_code }}</a>
+                                @endif
+                            @else
+                                Noch nicht versendet
+                            @endif
+                        </dd>
                     @endif
                 </dl>
             </div>
