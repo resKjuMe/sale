@@ -430,7 +430,7 @@ class CategoryArticleTest extends TestCase
         ]], $articles->all());
     }
 
-    public function test_category_and_public_page_filter_by_size_brand_and_status(): void
+    public function test_category_and_public_page_filter_by_size_and_brand_and_hide_sold(): void
     {
         $category = Category::create(['name' => 'Bodys']);
         $category->articles()->createMany([
@@ -440,14 +440,15 @@ class CategoryArticleTest extends TestCase
         ]);
 
         foreach ([route('categories.show', $category), $category->publicUrl()] as $url) {
-            $this->get($url)->assertOk()->assertSee(['Body Alpha', 'Body Beta', 'Body Gamma', 'Größe', 'Marke']);
+            $this->get($url)->assertOk()->assertSee(['Body Alpha', 'Body Beta', 'Body Gamma', 'Größe', 'Marke', 'Verkaufte ausblenden']);
             $this->get($url.'?'.http_build_query(['size' => ['68 / 72', '6-12 Monate']]))
                 ->assertSee(['Body Alpha', 'Body Beta'])->assertDontSee('Body Gamma');
-            $this->get($url.'?brand=Zara')->assertSee(['Body Alpha', 'Body Gamma'])->assertDontSee('Body Beta');
-            $this->get($url.'?status=sold')->assertSee('Body Gamma')->assertDontSee(['Body Alpha', 'Body Beta']);
-            $this->get($url.'?status=available&brand=Zara')->assertSee('Body Alpha')->assertDontSee(['Body Beta', 'Body Gamma']);
-            $this->get($url.'?status=bogus')->assertSee(['Body Alpha', 'Body Gamma']);
-            $this->get($url.'?brand=Nobody')->assertSee('Keine Artikel passen zum Filter.');
+            $this->get($url.'?brand[]=Zara')->assertSee(['Body Alpha', 'Body Gamma'])->assertDontSee('Body Beta');
+            $this->get($url.'?'.http_build_query(['brand' => ['Zara', 'H&M']]))->assertSee(['Body Alpha', 'Body Beta', 'Body Gamma']);
+            $this->get($url.'?hide_sold=1')->assertSee(['Body Alpha', 'Body Beta'])->assertDontSee('Body Gamma');
+            $this->get($url.'?hide_sold=1&brand[]=Zara')->assertSee('Body Alpha')->assertDontSee(['Body Beta', 'Body Gamma']);
+            $this->get($url.'?brand=Zara')->assertSee('Body Alpha')->assertDontSee('Body Beta');
+            $this->get($url.'?brand[]=Nobody')->assertSee('Keine Artikel passen zum Filter.');
         }
     }
 
@@ -463,7 +464,7 @@ class CategoryArticleTest extends TestCase
         $this->get(route('categories.show', [$category, 'size' => ['68 / 72']]))
             ->assertSee(route('categories.collage', [$category, 'size' => ['68 / 72']]), false);
 
-        $articles = $this->get(route('categories.collage', [$category, 'size' => ['68 / 72'], 'status' => 'available']))
+        $articles = $this->get(route('categories.collage', [$category, 'size' => ['68 / 72'], 'hide_sold' => 1]))
             ->assertOk()->viewData('articles');
 
         $this->assertSame(['Zara', 'H&M'], $articles->pluck('brand')->all());

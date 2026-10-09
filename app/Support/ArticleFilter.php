@@ -9,69 +9,62 @@ use Illuminate\Support\Collection;
 
 class ArticleFilter
 {
-    public const STATUSES = ['available' => 'Verfügbar', 'sold' => 'Verkauft'];
-
     /**
      * @param  list<string>  $sizes
+     * @param  list<string>  $brands
      */
     public function __construct(
         public readonly array $sizes = [],
-        public readonly ?string $brand = null,
-        public readonly ?string $status = null,
+        public readonly array $brands = [],
+        public readonly bool $hideSold = false,
     ) {}
 
     public static function fromRequest(Request $request): self
     {
-        $sizes = array_values(array_unique(array_filter(
-            array_map(fn ($size) => is_string($size) ? trim($size) : '', (array) $request->query('size', [])),
-            fn (string $size) => $size !== '',
-        )));
-        $brand = is_string($request->query('brand')) ? trim($request->query('brand')) : '';
-        $status = $request->query('status');
-
-        return new self($sizes, $brand === '' ? null : $brand, array_key_exists((string) $status, self::STATUSES) ? $status : null);
+        return new self(self::list($request, 'size'), self::list($request, 'brand'), $request->boolean('hide_sold'));
     }
 
     public function apply(Builder $query): Builder
     {
         return $query
             ->when($this->sizes, fn (Builder $query) => $query->whereIn('size', $this->sizes))
-            ->when($this->brand !== null, fn (Builder $query) => $query->where('brand', $this->brand))
-            ->when($this->status !== null, fn (Builder $query) => $query->where('sold', $this->status === 'sold'));
+            ->when($this->brands, fn (Builder $query) => $query->whereIn('brand', $this->brands))
+            ->when($this->hideSold, fn (Builder $query) => $query->where('sold', false));
     }
 
     public function isActive(): bool
     {
-        return $this->sizes !== [] || $this->brand !== null || $this->status !== null;
+        return $this->sizes !== [] || $this->brands !== [] || $this->hideSold;
     }
 
     public function query(): array
     {
-        return array_filter(['size' => $this->sizes, 'brand' => $this->brand, 'status' => $this->status]);
+        return array_filter(['size' => $this->sizes, 'brand' => $this->brands, 'hide_sold' => $this->hideSold ? 1 : null]);
     }
 
     /**
-     * @return Collection<string, int> Größe => Anzahl, natürlich sortiert
+     * @return list<string> natürlich sortiert
      */
-    public static function sizeOptions(Category $category): Collection
+    public static function options(Category $category, string $column): array
     {
-        return self::counted($category, 'size');
+        return $category->articles()->distinct()->pluck($column)
+            ->map(fn ($value) => (string) $value)
+            ->sort(fn (string $a, string $b) => strnatcasecmp($a, $b))
+            ->values()
+            ->all();
     }
 
     /**
-     * @return Collection<string, int> Marke => Anzahl
+     * @return list<string>
      */
-    public static function brandOptions(Category $category): Collection
+    private static function list(Request $request, string $key): array
     {
-        return self::counted($category, 'brand');
-    }
-
-    private static function counted(Category $category, string $column): Collection
-    {
-        return $category->articles()
-            ->selectRaw("$column as value, count(*) as total")
-            ->groupBy($column)
-            ->pluck('total', 'value')
-            ->sortKeysUsing(fn ($a, $b) => strnatcasecmp((string) $a, (string) $b));
+        return Collection::wrap($request->query($key, []))
+            ->filter(fn ($value) => is_string($value))
+            ->map(fn (string $value) => trim($value))
+            ->filter(fn (string $value) => $value !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 }

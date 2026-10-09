@@ -7,7 +7,7 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8"
              x-data="collage({ articles: @js($articles), title: @js($category->name), slug: @js(Str::slug($category->name) ?: 'kategorie') })">
-            <x-article-filter :filter="$filter" :category="$category" :with-status="false" class="mb-6 sm:rounded-lg" />
+            <x-article-filter :filter="$filter" :category="$category" :with-sold-toggle="false" class="mb-6 sm:rounded-lg" />
 
             @if ($articles->isEmpty())
                 <div class="bg-white shadow-sm sm:rounded-lg p-6 text-gray-600">

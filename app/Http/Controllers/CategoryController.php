@@ -53,7 +53,7 @@ class CategoryController extends Controller
     public function collage(Request $request, Category $category): View
     {
         // Verkaufte steuert die Collage-Seite selbst über „Verkaufte einbeziehen".
-        $filter = ArticleFilter::fromRequest($request->merge(['status' => null]));
+        $filter = ArticleFilter::fromRequest($request->merge(['hide_sold' => null]));
         $articles = $filter->apply($category->articles())->oldest()->get()->map(fn (Article $article) => [
             'id' => $article->id,
             'brand' => $article->brand,
