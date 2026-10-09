@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ArticleRequest;
 use App\Models\Article;
 use App\Models\Category;
+use App\Support\ArticleFilter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,14 @@ use Illuminate\View\View;
 
 class ArticleController extends Controller
 {
+    public function index(Request $request): View
+    {
+        $filter = ArticleFilter::fromRequest($request);
+        $articles = $filter->apply(Article::query())->with('category')->latest()->paginate(100)->withQueryString();
+
+        return view('articles.index', ['articles' => $articles, 'filter' => $filter, 'total' => Article::count()]);
+    }
+
     public function create(Category $category): View
     {
         return view('articles.form', ['category' => $category, 'article' => new Article]);

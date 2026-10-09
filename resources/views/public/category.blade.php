@@ -22,7 +22,7 @@
             </p>
         </header>
 
-        <x-article-filter :filter="$filter" :category="$category" class="mb-6" />
+        <x-article-filter :filter="$filter" :articles="$category->articles()" class="mb-6" />
 
         <div data-live-target="results">
         @if ($articles->isEmpty())

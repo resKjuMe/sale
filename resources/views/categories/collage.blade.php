@@ -6,7 +6,7 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <x-article-filter :filter="$filter" :category="$category" :with-sold-toggle="false" class="mb-6 sm:rounded-lg" />
+            <x-article-filter :filter="$filter" :articles="$category->articles()" :with-sold-toggle="false" class="mb-6 sm:rounded-lg" />
 
             <div data-live-target="results"
                  x-data="collage({ articles: @js($articles), title: @js($category->name), slug: @js(Str::slug($category->name) ?: 'kategorie') })">

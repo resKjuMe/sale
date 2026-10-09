@@ -1,12 +1,15 @@
-@props(['filter', 'category', 'withSoldToggle' => true])
+@props(['filter', 'articles', 'withSoldToggle' => true, 'withCategories' => false])
 
 @php
-    $groups = [
-        'size' => ['Größe', \App\Support\ArticleFilter::options($category, 'size'), $filter->sizes],
-        'brand' => ['Marke', \App\Support\ArticleFilter::options($category, 'brand'), $filter->brands],
-    ];
-    $groups = array_filter($groups, fn ($group) => count($group[1]) > 1);
-    $selectedCount = count($filter->sizes) + count($filter->brands);
+    $withLabels = fn (array $options) => collect($options)->map(fn ($count, $value) => [(string) $value, (string) $value, $count])->values()->all();
+    $groups = array_filter([
+        'category' => $withCategories
+            ? ['Kategorie', collect(\App\Support\ArticleFilter::categoryOptions())->map(fn ($option, $id) => [(string) $id, $option[0], $option[1]])->values()->all(), array_map('strval', $filter->categories)]
+            : null,
+        'size' => ['Größe', $withLabels(\App\Support\ArticleFilter::options($articles, 'size')), $filter->sizes],
+        'brand' => ['Marke', $withLabels(\App\Support\ArticleFilter::options($articles, 'brand')), $filter->brands],
+    ], fn ($group) => $group !== null && count($group[1]) > 1);
+    $selectedCount = count($filter->sizes) + count($filter->brands) + count($filter->categories);
 @endphp
 
 @if ($groups || $withSoldToggle)
@@ -49,11 +52,10 @@
                 @foreach ($groups as $name => [$label, $options, $selected])
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="w-14 shrink-0 text-sm font-medium text-gray-700">{{ $label }}</span>
-                        @foreach ($options as $option => $count)
-                            @php($option = (string) $option)
+                        @foreach ($options as [$value, $option, $count])
                             <label class="cursor-pointer">
-                                <input type="checkbox" name="{{ $name }}[]" value="{{ $option }}" class="peer sr-only"
-                                       @checked(in_array($option, $selected, true))>
+                                <input type="checkbox" name="{{ $name }}[]" value="{{ $value }}" class="peer sr-only"
+                                       @checked(in_array($value, $selected, true))>
                                 <span class="inline-block rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 transition hover:border-gray-400 peer-checked:border-gray-800 peer-checked:bg-gray-800 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-gray-500">{{ $option }}<span class="ml-1.5 inline-block min-w-[1.25rem] rounded-full bg-gray-100 px-1.5 text-center text-xs leading-5 text-gray-500 [.peer:checked~*_&]:bg-white/20 [.peer:checked~*_&]:text-white">{{ $count }}</span></span>
                             </label>
                         @endforeach

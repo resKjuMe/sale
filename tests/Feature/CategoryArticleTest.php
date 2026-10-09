@@ -469,4 +469,26 @@ class CategoryArticleTest extends TestCase
 
         $this->assertSame(['Zara', 'H&M'], $articles->pluck('brand')->all());
     }
+
+    public function test_overview_lists_articles_of_all_categories_with_category_filter(): void
+    {
+        $bodys = Category::create(['name' => 'Bodys']);
+        $hosen = Category::create(['name' => 'Hosen']);
+        $bodys->articles()->create(['image_path' => 'articles/a.jpg', 'title' => 'Body Alpha', 'brand' => 'Zara', 'size' => '68 / 72']);
+        $hosen->articles()->createMany([
+            ['image_path' => 'articles/b.jpg', 'title' => 'Hose Beta', 'brand' => 'H&M', 'size' => '74'],
+            ['image_path' => 'articles/c.jpg', 'title' => 'Hose Gamma', 'brand' => 'Zara', 'size' => '74', 'sold' => true],
+        ]);
+
+        $this->get(route('categories.index'))->assertSee(route('articles.index'));
+        $this->get(route('articles.index'))->assertOk()
+            ->assertSee(['Body Alpha', 'Hose Beta', 'Hose Gamma', 'Kategorie', 'Bodys', 'Hosen', '3 Artikel']);
+
+        $this->get(route('articles.index', ['category' => [$hosen->id]]))
+            ->assertSee(['Hose Beta', 'Hose Gamma', '2 von 3 Artikeln'])->assertDontSee('Body Alpha');
+        $this->get(route('articles.index', ['category' => [$hosen->id], 'brand' => ['Zara'], 'hide_sold' => 1]))
+            ->assertSee('Keine Artikel passen zum Filter.');
+        $this->get(route('articles.index', ['size' => ['74'], 'hide_sold' => 1]))
+            ->assertSee('Hose Beta')->assertDontSee(['Body Alpha', 'Hose Gamma']);
+    }
 }
