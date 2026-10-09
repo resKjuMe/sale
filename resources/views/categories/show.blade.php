@@ -18,6 +18,9 @@
                 <a href="{{ route('categories.print', $category) }}" target="_blank">
                     <x-secondary-button type="button">Druckansicht</x-secondary-button>
                 </a>
+                <a href="{{ route('categories.collage', $category) }}">
+                    <x-secondary-button type="button">Collagen</x-secondary-button>
+                </a>
                 <a href="{{ route('categories.edit', $category) }}">
                     <x-secondary-button type="button">Bearbeiten</x-secondary-button>
                 </a>

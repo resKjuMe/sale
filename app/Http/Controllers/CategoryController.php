@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Article;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +46,20 @@ class CategoryController extends Controller
             'articles' => $category->articles()->oldest()->get(),
             'columns' => min(4, max(2, $request->integer('cols', 3))),
         ]);
+    }
+
+    public function collage(Category $category): View
+    {
+        $articles = $category->articles()->oldest()->get()->map(fn (Article $article) => [
+            'id' => $article->id,
+            'brand' => $article->brand,
+            'size' => $article->size,
+            'sold' => $article->sold,
+            // Relativ, damit das Canvas bei abweichender APP_URL nicht als cross-origin gesperrt wird.
+            'image' => parse_url($article->imageUrl(), PHP_URL_PATH),
+        ]);
+
+        return view('categories.collage', compact('category', 'articles'));
     }
 
     public function regeneratePublicLink(Category $category): RedirectResponse

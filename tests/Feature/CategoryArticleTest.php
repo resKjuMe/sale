@@ -405,4 +405,28 @@ class CategoryArticleTest extends TestCase
         $this->assertSame(0, Article::count());
         Storage::disk('public')->assertMissing($path);
     }
+
+    public function test_collage_page_provides_brand_size_and_relative_image_of_every_article(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $this->post(route('categories.articles.store', $category), [
+            'image' => UploadedFile::fake()->image('a.jpg'),
+            'brand' => 'Petit Bateau',
+            'size' => '6-12 Monate',
+        ]);
+        $article = Article::sole();
+        $article->markSold(true);
+
+        $this->get(route('categories.show', $category))->assertSee(route('categories.collage', $category));
+        $response = $this->get(route('categories.collage', $category))->assertOk();
+
+        $articles = $response->viewData('articles');
+        $this->assertSame([[
+            'id' => $article->id,
+            'brand' => 'Petit Bateau',
+            'size' => '6-12 Monate',
+            'sold' => true,
+            'image' => '/storage/'.$article->image_path,
+        ]], $articles->all());
+    }
 }

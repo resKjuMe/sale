@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('categories', CategoryController::class);
     Route::get('categories/{category}/print', [CategoryController::class, 'print'])->name('categories.print');
+    Route::get('categories/{category}/collage', [CategoryController::class, 'collage'])->name('categories.collage');
     Route::post('categories/{category}/public-link', [CategoryController::class, 'regeneratePublicLink'])->name('categories.public-link');
     Route::get('categories/{category}/articles/quick', [ArticleController::class, 'quick'])->name('categories.articles.quick');
     Route::get('categories/{category}/articles/bulk', [ArticleController::class, 'bulk'])->name('categories.articles.bulk');
