@@ -47,6 +47,13 @@ class CategoryController extends Controller
         ]);
     }
 
+    public function regeneratePublicLink(Category $category): RedirectResponse
+    {
+        $category->regeneratePublicToken();
+
+        return redirect()->route('categories.show', $category)->with('status', 'Neuer öffentlicher Link erzeugt, der alte ist ungültig.');
+    }
+
     public function edit(Category $category): View
     {
         return view('categories.form', compact('category'));

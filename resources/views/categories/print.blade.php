@@ -63,9 +63,17 @@
             <div class="print-grid">
                 @foreach ($articles as $article)
                     <figure class="print-card">
-                        <img src="{{ $article->imageUrl() }}" alt="{{ $article->displayTitle() }}"
-                             class="aspect-[3/4] w-full border border-gray-200 bg-gray-50 object-cover">
-                        <figcaption class="mt-1.5 text-sm leading-snug">
+                        <div class="relative">
+                            <img src="{{ $article->imageUrl() }}" alt="{{ $article->displayTitle() }}"
+                                 @class(['aspect-[3/4] w-full border border-gray-200 bg-gray-50 object-cover', 'opacity-60' => $article->sold])>
+                            @if ($article->sold)
+                                <svg class="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                    <line x1="0" y1="0" x2="100" y2="100" stroke="#111" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+                                    <line x1="100" y1="0" x2="0" y2="100" stroke="#111" stroke-width="2.5" vector-effect="non-scaling-stroke" />
+                                </svg>
+                            @endif
+                        </div>
+                        <figcaption @class(['mt-1.5 text-sm leading-snug', 'line-through decoration-2 text-gray-500' => $article->sold])>
                             @if ($article->title)
                                 <div class="font-semibold">{{ $article->title }}</div>
                             @endif

@@ -210,6 +210,51 @@ class CategoryArticleTest extends TestCase
         $this->get(route('categories.show', $category))->assertDontSee('Verkauft');
     }
 
+    public function test_print_view_strikes_through_sold_articles(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+        $category->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Verfuegbar', 'size' => 'M']);
+        $category->articles()->create(['image_path' => 'articles/b.jpg', 'brand' => 'Weg', 'size' => 'L', 'sold' => true]);
+
+        $html = $this->get(route('categories.print', $category))->assertOk()->assertSee(['Verfuegbar', 'Weg'])->getContent();
+
+        $this->assertSame(1, substr_count($html, 'line-through'));
+        $this->assertSame(2, substr_count($html, '<line '));
+    }
+
+    public function test_public_page_is_reachable_without_login_and_hides_buyer_data(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+        $category->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Nike', 'size' => '42', 'price' => 20]);
+        $category->articles()->create([
+            'image_path' => 'articles/b.jpg', 'brand' => 'Adidas', 'size' => '43',
+            'sold' => true, 'buyer_name' => 'Geheim Käufer', 'buyer_address' => 'Geheimweg 1', 'paid' => true, 'sale_price' => 99,
+        ]);
+        $this->assertSame(32, strlen($category->public_token));
+
+        $this->get(route('categories.show', $category))->assertSee($category->publicUrl());
+
+        auth()->logout();
+        $this->get($category->publicUrl())
+            ->assertOk()
+            ->assertSee(['Schuhe', 'Nike', 'Adidas', 'Verkauft', '20,00 €', 'noindex'])
+            ->assertDontSee(['Geheim Käufer', 'Geheimweg', '99,00', 'Bezahlt', 'Abmelden', 'Kategorien']);
+
+        $this->get('/p/'.str_repeat('x', 32))->assertNotFound();
+    }
+
+    public function test_regenerating_public_link_invalidates_old_one(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+        $oldUrl = $category->publicUrl();
+
+        $this->post(route('categories.public-link', $category))->assertRedirect(route('categories.show', $category));
+
+        $this->assertNotSame($oldUrl, $category->fresh()->publicUrl());
+        $this->get($oldUrl)->assertNotFound();
+        $this->get($category->fresh()->publicUrl())->assertOk();
+    }
+
     public function test_image_brand_and_size_are_required(): void
     {
         $category = Category::create(['name' => 'Schuhe']);
