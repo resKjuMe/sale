@@ -999,4 +999,23 @@ class CategoryArticleTest extends TestCase
         $this->get(route('categories.show', [$category, 'stale' => 1]))->assertSee('Alter Body')->assertDontSee('Neuer Body');
         $this->get($category->publicUrl().'?stale=1')->assertSee('Neuer Body')->assertDontSee('Ladenhüter');
     }
+
+    public function test_internal_filters_for_sold_and_paid_articles(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $category->articles()->createMany([
+            ['image_path' => 'articles/a.jpg', 'title' => 'Body frei', 'brand' => 'Zara', 'size' => '74'],
+            ['image_path' => 'articles/b.jpg', 'title' => 'Body offen', 'brand' => 'Zara', 'size' => '74', 'sold' => true],
+            ['image_path' => 'articles/c.jpg', 'title' => 'Body bezahlt', 'brand' => 'Zara', 'size' => '74', 'sold' => true, 'paid' => true],
+        ]);
+
+        $this->get(route('articles.index'))->assertSeeTextInOrder(['Verkauft', '2', 'Bezahlt', '1']);
+        $this->get(route('articles.index', ['sold' => 1]))->assertSee(['Body offen', 'Body bezahlt'])->assertDontSee('Body frei');
+        $this->get(route('categories.show', [$category, 'paid' => 1]))->assertSee('Body bezahlt')->assertDontSee(['Body offen', 'Body frei']);
+
+        $public = $this->get($category->publicUrl().'?paid=1')->assertSee(['Body frei', 'Body offen', 'Body bezahlt']);
+        $public->assertDontSee('name="paid"', false)->assertDontSee('name="sold"', false);
+
+        $this->get(route('dashboard'))->assertSee(route('articles.index', ['sold' => 1]));
+    }
 }

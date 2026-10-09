@@ -22,7 +22,12 @@ class ArticleFilter
         public readonly array $categories = [],
         public readonly array $pending = [],
         public readonly bool $stale = false,
+        public readonly bool $soldOnly = false,
+        public readonly bool $paidOnly = false,
     ) {}
+
+    // Interne Status-Filter: Parameter => Beschriftung
+    public const STATUS = ['sold' => 'Verkauft', 'paid' => 'Bezahlt'];
 
     public const PENDING = ['payment' => 'Zahlung ausstehend', 'shipping' => 'Versand/Abholung ausstehend'];
 
@@ -35,6 +40,8 @@ class ArticleFilter
             array_values(array_filter(array_map('intval', self::list($request, 'category')))),
             $internal ? array_values(array_intersect(array_keys(self::PENDING), self::list($request, 'pending'))) : [],
             $internal && $request->boolean('stale'),
+            $internal && $request->boolean('sold'),
+            $internal && $request->boolean('paid'),
         );
     }
 
@@ -50,12 +57,14 @@ class ArticleFilter
                     $query->orWhere(fn (Builder $query) => $pending === 'payment' ? $query->paymentPending() : $query->shippingPending());
                 }
             }))
-            ->when($this->stale, fn (Builder $query) => $query->stale());
+            ->when($this->stale, fn (Builder $query) => $query->stale())
+            ->when($this->soldOnly, fn (Builder $query) => $query->where('sold', true))
+            ->when($this->paidOnly, fn (Builder $query) => $query->where('sold', true)->where('paid', true));
     }
 
     public function isActive(): bool
     {
-        return $this->sizes !== [] || $this->brands !== [] || $this->hideSold || $this->categories !== [] || $this->pending !== [] || $this->stale;
+        return $this->sizes !== [] || $this->brands !== [] || $this->hideSold || $this->categories !== [] || $this->pending !== [] || $this->stale || $this->soldOnly || $this->paidOnly;
     }
 
     public function query(): array
@@ -67,6 +76,8 @@ class ArticleFilter
             'hide_sold' => $this->hideSold ? 1 : null,
             'pending' => $this->pending,
             'stale' => $this->stale ? 1 : null,
+            'sold' => $this->soldOnly ? 1 : null,
+            'paid' => $this->paidOnly ? 1 : null,
         ]);
     }
 
@@ -79,6 +90,8 @@ class ArticleFilter
             $key === 'category' ? [] : $this->categories,
             $key === 'pending' ? [] : $this->pending,
             $key === 'stale' ? false : $this->stale,
+            $key === 'sold' ? false : $this->soldOnly,
+            $key === 'paid' ? false : $this->paidOnly,
         );
     }
 
@@ -104,6 +117,22 @@ class ArticleFilter
     /**
      * @return array<string, int> 'payment'/'shipping' => Anzahl unter allen übrigen Filtern
      */
+    /**
+     * @return array<string, int> 'sold'/'paid' => Anzahl unter allen übrigen Filtern
+     */
+    public function statusCounts(Builder $articles): array
+    {
+        return [
+            'sold' => $this->without('sold')->apply(clone $articles)->where('sold', true)->count(),
+            'paid' => $this->without('paid')->apply(clone $articles)->where('sold', true)->where('paid', true)->count(),
+        ];
+    }
+
+    public function isStatusSelected(string $status): bool
+    {
+        return $status === 'sold' ? $this->soldOnly : $this->paidOnly;
+    }
+
     public function staleCount(Builder $articles): int
     {
         return $this->without('stale')->apply(clone $articles)->stale()->count();

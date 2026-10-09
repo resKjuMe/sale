@@ -22,12 +22,12 @@
                 )));
                 $tiles = [
                     ['Verfügbar', $stats['available'], 'von '.$stats['total'].' Artikeln', route('articles.index', ['hide_sold' => 1]), false, []],
-                    ['Verkauft', $stats['sold'], $stats['soldThisMonth'].' in diesem Monat', route('articles.index'), false, []],
+                    ['Verkauft', $stats['sold'], $stats['soldThisMonth'].' in diesem Monat', route('articles.index', ['sold' => 1]), false, []],
                     [
                         'Umsatz',
                         \App\Models\Article::euro($stats['revenue']),
                         'aller verkauften Artikel',
-                        null,
+                        route('articles.index', ['sold' => 1]),
                         false,
                         $gaps(['ohne-preis' => fn ($n) => $count($n, 'Verkauf ohne Preis', 'Verkäufe ohne Preis')]),
                     ],

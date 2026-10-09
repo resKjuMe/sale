@@ -20,6 +20,8 @@
     ], fn ($group) => $group !== null && (count($group[1]) > 1 || $group[2] !== []));
     $selectedCount = count($filter->sizes) + count($filter->brands) + count($filter->categories);
     $staleCount = $withStale ? $filter->staleCount($articles) : 0;
+    // „Verkauft"/„Bezahlt" sind wie die Offen-Pills nur intern.
+    $statusCounts = $withPending ? $filter->statusCounts($articles) : [];
     $pending = $withPending
         ? array_filter($filter->pendingCounts($articles), fn ($count, $value) => $count > 0 || in_array($value, $filter->pending, true), ARRAY_FILTER_USE_BOTH)
         : [];
@@ -38,6 +40,14 @@
 
             @if ($withPending)
                 <div class="flex flex-wrap items-center gap-2" data-live-target="filter-pending">
+                    @foreach ($statusCounts as $status => $count)
+                        @if ($count > 0 || $filter->isStatusSelected($status))
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="{{ $status }}" value="1" class="peer sr-only" @checked($filter->isStatusSelected($status))>
+                                <span class="inline-block rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 transition hover:border-gray-400 peer-checked:border-gray-800 peer-checked:bg-gray-800 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-gray-500">{{ \App\Support\ArticleFilter::STATUS[$status] }}<span class="ml-1.5 inline-block min-w-[1.25rem] rounded-full bg-gray-100 px-1.5 text-center text-xs leading-5 text-gray-500 [.peer:checked~*_&]:bg-white/20 [.peer:checked~*_&]:text-white">{{ $count }}</span></span>
+                            </label>
+                        @endif
+                    @endforeach
                     @foreach ($pending as $value => $count)
                         <label class="cursor-pointer">
                             <input type="checkbox" name="pending[]" value="{{ $value }}" class="peer sr-only" @checked(in_array($value, $filter->pending, true))>
