@@ -2,6 +2,9 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Alle Artikel</h2>
+            <a href="{{ route('articles.collage', $filter->query()) }}" data-live-target="collage-link" class="order-last sm:order-none sm:ms-auto">
+                <x-secondary-button type="button">Collagen</x-secondary-button>
+            </a>
             <span class="text-sm text-gray-500" data-live-target="overview-count">
                 @if ($filter->isActive())
                     {{ $articles->total() }} von {{ $total }} Artikeln

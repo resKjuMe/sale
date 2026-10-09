@@ -22,6 +22,21 @@ class ArticleController extends Controller
         return view('articles.index', ['articles' => $articles, 'filter' => $filter, 'total' => Article::count()]);
     }
 
+    public function collage(Request $request): View
+    {
+        // Verkaufte steuert die Collage-Seite selbst über „Verkaufte einbeziehen".
+        $filter = ArticleFilter::fromRequest($request->merge(['hide_sold' => null]));
+
+        return view('categories.collage', [
+            'articles' => $filter->apply(Article::query())->oldest()->get()->map->toCollageArray(),
+            'filter' => $filter,
+            'source' => Article::query(),
+            'title' => config('app.name'),
+            'back' => [route('articles.index', $filter->query()), 'Alle Artikel'],
+            'withCategories' => true,
+        ]);
+    }
+
     public function regeneratePublicLink(Request $request): RedirectResponse
     {
         $request->user()->regeneratePublicToken();

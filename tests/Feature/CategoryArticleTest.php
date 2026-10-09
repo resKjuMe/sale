@@ -1036,4 +1036,22 @@ class CategoryArticleTest extends TestCase
 
         $this->assertCount(2, Article::sole()->images);
     }
+
+    public function test_collage_for_all_articles_with_category_filter(): void
+    {
+        $bodys = Category::create(['name' => 'Bodys']);
+        $hosen = Category::create(['name' => 'Hosen']);
+        $bodys->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74']);
+        $hosen->articles()->create(['image_path' => 'articles/b.jpg', 'brand' => 'H&M', 'size' => '80']);
+
+        $this->get(route('articles.index', ['category' => [$hosen->id]]))->assertSee(route('articles.collage', ['category' => [$hosen->id]]), false);
+
+        $all = $this->get(route('articles.collage'))->assertOk()->assertSee(['Alle Artikel', 'Kategorie']);
+        $this->assertSame(['Zara', 'H&M'], $all->viewData('articles')->pluck('brand')->all());
+
+        $filtered = $this->get(route('articles.collage', ['category' => [$hosen->id]]))->assertOk();
+        $this->assertSame(['H&M'], $filtered->viewData('articles')->pluck('brand')->all());
+
+        $this->get(route('categories.collage', $bodys))->assertOk()->assertSee('Überschrift „Bodys“', false);
+    }
 }

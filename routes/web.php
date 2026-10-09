@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function () {
     Route::put('bestellungen/{bundle}', [OrderController::class, 'update'])->name('orders.update');
     Route::delete('bestellungen/{bundle}', [OrderController::class, 'destroy'])->name('orders.destroy');
     Route::delete('bestellungen/{bundle}/artikel/{article}', [OrderController::class, 'removeArticle'])->name('orders.articles.remove');
+    Route::get('articles/collage', [ArticleController::class, 'collage'])->name('articles.collage');
     Route::get('articles/batch', [BatchArticleController::class, 'edit'])->name('articles.batch.edit');
     Route::post('articles/batch', [BatchArticleController::class, 'update'])->name('articles.batch.update');
     Route::post('articles/ai-suggest', ArticleAssistController::class)->middleware('throttle:30,1')->name('articles.ai-suggest');

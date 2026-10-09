@@ -172,6 +172,21 @@ class Article extends Model
         }
     }
 
+    /**
+     * @return array{id: int, brand: string, size: string, sold: bool, image: string}
+     */
+    public function toCollageArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'brand' => $this->brand,
+            'size' => $this->size,
+            'sold' => $this->sold,
+            // Relativ, damit das Canvas bei abweichender APP_URL nicht als cross-origin gesperrt wird.
+            'image' => parse_url($this->imageUrl(), PHP_URL_PATH),
+        ];
+    }
+
     public function images(): HasMany
     {
         return $this->hasMany(ArticleImage::class)->orderBy('position')->orderBy('id');

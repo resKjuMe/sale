@@ -55,16 +55,16 @@ class CategoryController extends Controller
     {
         // Verkaufte steuert die Collage-Seite selbst über „Verkaufte einbeziehen".
         $filter = ArticleFilter::fromRequest($request->merge(['hide_sold' => null]));
-        $articles = $filter->apply($category->articles())->oldest()->get()->map(fn (Article $article) => [
-            'id' => $article->id,
-            'brand' => $article->brand,
-            'size' => $article->size,
-            'sold' => $article->sold,
-            // Relativ, damit das Canvas bei abweichender APP_URL nicht als cross-origin gesperrt wird.
-            'image' => parse_url($article->imageUrl(), PHP_URL_PATH),
-        ]);
+        $articles = $filter->apply($category->articles())->oldest()->get()->map->toCollageArray();
 
-        return view('categories.collage', compact('category', 'articles', 'filter'));
+        return view('categories.collage', [
+            'articles' => $articles,
+            'filter' => $filter,
+            'source' => $category->articles(),
+            'title' => $category->name,
+            'back' => [route('categories.show', [$category, ...$filter->query()]), $category->name],
+            'withCategories' => false,
+        ]);
     }
 
     public function regeneratePublicLink(Category $category): RedirectResponse

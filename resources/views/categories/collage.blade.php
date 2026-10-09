@@ -1,19 +1,19 @@
 <x-app-layout>
     <x-slot name="header">
-        <a href="{{ route('categories.show', [$category, ...$filter->query()]) }}" data-live-target="back-link" class="text-sm text-gray-500 hover:text-gray-700">&larr; {{ $category->name }}</a>
+        <a href="{{ $back[0] }}" data-live-target="back-link" class="text-sm text-gray-500 hover:text-gray-700">&larr; {{ $back[1] }}</a>
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">Collagen</h2>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <x-article-filter :filter="$filter" :articles="$category->articles()" :with-sold-toggle="false" class="mb-6 sm:rounded-lg" />
+            <x-article-filter :filter="$filter" :articles="$source" :with-categories="$withCategories" :with-sold-toggle="false" class="mb-6 sm:rounded-lg" />
 
             <div data-live-target="results"
-                 x-data="collage({ articles: @js($articles), title: @js($category->name), slug: @js(Str::slug($category->name) ?: 'kategorie') })">
+                 x-data="collage({ articles: @js($articles), title: @js($title), slug: @js(Str::slug($title) ?: 'collage') })">
 
             @if ($articles->isEmpty())
                 <div class="bg-white shadow-sm sm:rounded-lg p-6 text-gray-600">
-                    {{ $filter->isActive() ? 'Keine Artikel passen zum Filter.' : 'In dieser Kategorie gibt es noch keine Artikel.' }}
+                    {{ $filter->isActive() ? 'Keine Artikel passen zum Filter.' : 'Hier gibt es noch keine Artikel.' }}
                 </div>
             @else
                 <div class="mb-6 space-y-4 bg-white p-4 shadow-sm sm:rounded-lg">
@@ -30,7 +30,7 @@
                         <span class="w-20 text-sm font-medium text-gray-700">Optionen</span>
                         <label class="inline-flex items-center gap-2 text-sm text-gray-700">
                             <input type="checkbox" x-model="showHeader" class="rounded border-gray-300 text-gray-800 shadow-sm focus:ring-gray-500">
-                            Kategoriename als Überschrift
+                            Überschrift „{{ $title }}“
                         </label>
                         <label class="inline-flex items-center gap-2 text-sm text-gray-700">
                             <input type="checkbox" x-model="includeSold" class="rounded border-gray-300 text-gray-800 shadow-sm focus:ring-gray-500">
