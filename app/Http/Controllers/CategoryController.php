@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Models\Category;
+use App\Models\Tenant;
 use App\Support\ArticleFilter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -97,7 +98,7 @@ class CategoryController extends Controller
     private function validated(Request $request, ?Category $category = null): array
     {
         return $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('categories')->ignore($category)],
+            'name' => ['required', 'string', 'max:255', Rule::unique('categories')->ignore($category)->where('tenant_id', Tenant::currentId())],
             'description' => ['nullable', 'string', 'max:2000'],
         ], [], ['name' => 'Name', 'description' => 'Beschreibung']);
     }

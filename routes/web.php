@@ -15,7 +15,7 @@ Route::redirect('/', '/dashboard');
 Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('p/alle/{token}', [PublicCategoryController::class, 'overview'])->name('public.overview');
-Route::get('p/{category:public_token}', [PublicCategoryController::class, 'show'])->name('public.category');
+Route::get('p/{token}', [PublicCategoryController::class, 'show'])->name('public.category');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

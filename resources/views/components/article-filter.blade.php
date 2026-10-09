@@ -8,7 +8,9 @@
 
         return $label ? $options->sortBy(fn ($option) => mb_strtolower($option[1]))->values()->all() : $options->values()->all();
     };
-    $categoryNames = $withCategories ? \App\Models\Category::pluck('name', 'id')->all() : [];
+    $categoryNames = $withCategories
+        ? \App\Models\Category::withoutGlobalScope('tenant')->whereIn('id', [...array_keys($filter->facet($articles, 'category')), ...$filter->categories])->pluck('name', 'id')->all()
+        : [];
     $groups = array_filter([
         'category' => $withCategories
             ? ['Kategorie', $facet('category', array_map('strval', $filter->categories), fn ($id) => $categoryNames[$id] ?? '?'), array_map('strval', $filter->categories)]

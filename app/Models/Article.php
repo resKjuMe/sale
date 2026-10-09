@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Enums\ArticleCondition;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
 
 class Article extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
         'image_path', 'title', 'brand', 'size', 'condition', 'price', 'vinted_url',
         'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipping_cost', 'pickup', 'picked_up', 'shipped', 'tracking_code', 'bundle_id',

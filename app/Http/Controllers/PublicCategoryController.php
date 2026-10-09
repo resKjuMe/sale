@@ -11,32 +11,35 @@ use Illuminate\View\View;
 
 class PublicCategoryController extends Controller
 {
-    public function show(Request $request, Category $category): View
+    public function show(Request $request, string $token): View
     {
+        $category = Category::withoutGlobalScope('tenant')->where('public_token', $token)->firstOrFail();
+        $source = Article::forTenant($category->tenant_id)->where('category_id', $category->id);
         $filter = ArticleFilter::fromRequest($request, internal: false);
-        $articles = $filter->apply($category->articles())->with('images')->orderBy('sold')->latest()->get();
+        $articles = $filter->apply(clone $source)->with('images')->orderBy('sold')->latest()->get();
 
         return view('public.category', [
             'title' => $category->name,
             'description' => $category->description,
             'articles' => $articles,
             'filter' => $filter,
-            'source' => $category->articles(),
+            'source' => $source,
         ]);
     }
 
     public function overview(Request $request, string $token): View
     {
-        User::where('public_token', $token)->firstOrFail();
+        $tenantId = User::where('public_token', $token)->firstOrFail()->tenant_id;
+        $source = Article::forTenant($tenantId);
         $filter = ArticleFilter::fromRequest($request, internal: false);
-        $articles = $filter->apply(Article::query())->with(['category', 'images'])->orderBy('sold')->latest()->get();
+        $articles = $filter->apply(clone $source)->with(['category' => fn ($query) => $query->withoutGlobalScope('tenant'), 'images'])->orderBy('sold')->latest()->get();
 
         return view('public.category', [
             'title' => config('app.name'),
             'description' => null,
             'articles' => $articles,
             'filter' => $filter,
-            'source' => Article::query(),
+            'source' => $source,
             'overview' => true,
         ]);
     }

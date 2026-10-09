@@ -21,7 +21,7 @@ class ArticleAssistController extends Controller
             'mode' => ['required', Rule::in(ArticleAssistant::MODES)],
             'images' => ['nullable', 'array', 'max:'.self::MAX_IMAGES],
             'images.*' => ['image', 'max:10240'],
-            'article_id' => ['nullable', 'integer', 'exists:articles,id'],
+            'article_id' => ['nullable', 'integer'],
             'brand' => ['nullable', 'string', 'max:255'],
             'size' => ['nullable', 'string', 'max:50'],
         ]);
@@ -33,7 +33,7 @@ class ArticleAssistController extends Controller
         // Neu gewählte Fotos zuerst, danach die schon gespeicherten des Artikels.
         $images = array_map(fn (UploadedFile $file) => $file->getContent(), $request->file('images', []));
         if (isset($data['article_id'])) {
-            $article = Article::with('images')->find($data['article_id']);
+            $article = Article::with('images')->findOrFail($data['article_id']);
             foreach ([$article->image_path, ...$article->images->pluck('path')] as $path) {
                 $images[] = Storage::disk('public')->get($path);
             }
