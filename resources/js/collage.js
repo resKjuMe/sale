@@ -195,25 +195,49 @@ async function renderPage({ title, articles, cols, rows, page, pageCount, showHe
     ));
 }
 
+const SETTINGS_KEY = 'collageSettings';
+const DEFAULTS = { cols: 2, rows: 3, includeSold: false, showHeader: true };
+
+// Überlebt den Austausch der Komponente beim Filtern.
+function recallSettings() {
+    try {
+        return { ...DEFAULTS, ...JSON.parse(sessionStorage.getItem(SETTINGS_KEY) ?? '{}') };
+    } catch (e) {
+        return DEFAULTS;
+    }
+}
+
+function rememberSettings(settings) {
+    try {
+        sessionStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+        // ohne Storage gelten die Einstellungen nur bis zum Neuladen
+    }
+}
+
 export default ({ articles, title, slug }) => ({
     articles,
     title,
     grids: GRIDS,
-    cols: 2,
-    rows: 3,
-    includeSold: false,
-    showHeader: true,
+    ...recallSettings(),
     pages: [],
     busy: false,
     error: '',
     run: 0,
 
     init() {
-        this.$watch('cols', () => this.render());
-        this.$watch('rows', () => this.render());
-        this.$watch('includeSold', () => this.render());
-        this.$watch('showHeader', () => this.render());
+        for (const key of Object.keys(DEFAULTS)) {
+            this.$watch(key, () => {
+                rememberSettings({ cols: this.cols, rows: this.rows, includeSold: this.includeSold, showHeader: this.showHeader });
+                this.render();
+            });
+        }
         this.render();
+    },
+
+    destroy() {
+        this.run++;
+        this.pages.forEach((page) => URL.revokeObjectURL(page.url));
     },
 
     get selected() {

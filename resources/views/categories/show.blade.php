@@ -18,14 +18,14 @@
                 <a href="{{ route('categories.print', $category) }}" target="_blank">
                     <x-secondary-button type="button">Druckansicht</x-secondary-button>
                 </a>
-                <a href="{{ route('categories.collage', [$category, ...$filter->query()]) }}">
+                <a href="{{ route('categories.collage', [$category, ...$filter->query()]) }}" data-live-target="collage-link">
                     <x-secondary-button type="button">Collagen</x-secondary-button>
                 </a>
                 <a href="{{ route('categories.edit', $category) }}">
                     <x-secondary-button type="button">Bearbeiten</x-secondary-button>
                 </a>
                 <form method="POST" action="{{ route('categories.destroy', $category) }}"
-                      onsubmit="return confirm('Kategorie inklusive aller {{ $articles->total() }} Artikel löschen?')">
+                      onsubmit="return confirm('Kategorie inklusive aller {{ $category->articles()->count() }} Artikel löschen?')">
                     @csrf
                     @method('DELETE')
                     <x-danger-button>Löschen</x-danger-button>
@@ -67,6 +67,7 @@
 
             <x-article-filter :filter="$filter" :category="$category" class="mb-6 sm:rounded-lg" />
 
+            <div data-live-target="results">
             @if ($articles->isEmpty())
                 <div class="bg-white shadow-sm sm:rounded-lg p-6 text-gray-600">
                     {{ $filter->isActive() ? 'Keine Artikel passen zum Filter.' : 'In dieser Kategorie gibt es noch keine Artikel.' }}
@@ -150,6 +151,7 @@
                     </div>
                 </div>
             @endif
+            </div>
         </div>
     </div>
 </x-app-layout>

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>{{ $category->name }}</title>
-    @vite(['resources/css/app.css'])
+    @vite(['resources/css/app.css', 'resources/js/live-filter.js'])
 </head>
 <body class="bg-gray-100 font-sans text-gray-900 antialiased">
     <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -14,7 +14,7 @@
             @if ($category->description)
                 <p class="mt-2 whitespace-pre-line text-gray-600">{{ $category->description }}</p>
             @endif
-            <p class="mt-2 text-sm text-gray-500">
+            <p class="mt-2 text-sm text-gray-500" data-live-target="counts">
                 {{ $articles->where('sold', false)->count() }} verfügbar
                 @if ($articles->where('sold', true)->isNotEmpty())
                     · {{ $articles->where('sold', true)->count() }} verkauft
@@ -24,6 +24,7 @@
 
         <x-article-filter :filter="$filter" :category="$category" class="mb-6" />
 
+        <div data-live-target="results">
         @if ($articles->isEmpty())
             <p class="rounded-lg bg-white p-6 text-gray-600 shadow-sm">{{ $filter->isActive() ? 'Keine Artikel passen zum Filter.' : 'Hier gibt es noch keine Artikel.' }}</p>
         @else
@@ -57,6 +58,7 @@
                 @endforeach
             </div>
         @endif
+        </div>
     </main>
 </body>
 </html>
