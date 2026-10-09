@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-// Mandant: alle Kategorien, Artikel und Sammelverkäufe gehören genau einem.
+// Mandant: alle Kategorien, Artikel und Bestellungen gehören genau einem.
 class Tenant extends Model
 {
     protected $fillable = ['name'];

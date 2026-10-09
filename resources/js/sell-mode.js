@@ -50,6 +50,19 @@ export default ({ sold, details, ids = [], batchUrl = null }) => ({
         return Object.keys(this.selected).filter((id) => this.selected[id]);
     },
 
+    // In diesem Durchgang als verkauft angetippt – Kandidaten für eine gemeinsame Bestellung.
+    get soldNow() {
+        return Object.keys(this.changed).filter((id) => this.changed[id] && this.sold[id]);
+    },
+
+    bundleSoldNow() {
+        const params = new URLSearchParams();
+        this.soldNow.forEach((id) => params.append('ids[]', id));
+        params.append('back', window.location.href);
+        this.setActive(false);
+        window.location.href = `${this.batchUrl}?${params}#bestellung`;
+    },
+
     get allSelected() {
         return this.ids.length > 0 && this.ids.every((id) => this.selected[id]);
     },

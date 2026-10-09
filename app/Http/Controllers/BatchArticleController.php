@@ -23,13 +23,13 @@ class BatchArticleController extends Controller
             'articles' => $articles,
             'categories' => Category::orderBy('name')->get(),
             'back' => $request->input('back', url()->previous()),
-            'allAvailable' => $articles->every(fn (Article $article) => ! $article->sold),
+            'bundleable' => $articles->every(fn (Article $article) => $article->bundle_id === null),
         ]);
     }
 
     public function update(Request $request): RedirectResponse
     {
-        $request->merge(collect(['value', 'shipping_cost'])->mapWithKeys(fn ($key) => [$key => self::decimal($request->input($key))])->all());
+        $request->merge(collect(['value', 'shipping_cost', 'total'])->mapWithKeys(fn ($key) => [$key => self::decimal($request->input($key))])->all());
         $request->merge(['sale_price' => array_map(self::decimal(...), (array) $request->input('sale_price', []))]);
         $articles = $this->selected($request);
         $back = $request->input('back', route('articles.index'));
@@ -39,6 +39,10 @@ class BatchArticleController extends Controller
             'price' => $this->changePrice($request, $articles),
             'bundle' => $this->createBundle($request, $articles),
         };
+
+        if ($request->input('action') === 'bundle') {
+            return redirect()->route('orders.show', $articles->first()->fresh()->bundle_id)->with('status', $status);
+        }
 
         return redirect()->to($back)->with('status', $status);
     }
@@ -79,20 +83,26 @@ class BatchArticleController extends Controller
 
     private function createBundle(Request $request, Collection $articles): string
     {
-        if ($articles->contains('sold', true)) {
-            throw ValidationException::withMessages(['ids' => 'Für einen Sammelverkauf dürfen nur verfügbare Artikel ausgewählt sein.']);
+        if ($articles->contains(fn (Article $article) => $article->bundle_id !== null)) {
+            throw ValidationException::withMessages(['ids' => 'Mindestens ein Artikel gehört schon zu einer Bestellung.']);
         }
 
         $data = $request->validate([
             'buyer_name' => ['required', 'string', 'max:255'],
             'buyer_address' => ['nullable', 'string', 'max:1000'],
+            'price_mode' => ['nullable', Rule::in(['total', 'each'])],
+            'total' => ['nullable', 'numeric', 'min:0', 'max:99999'],
             'sale_price' => ['array'],
             'sale_price.*' => ['nullable', 'numeric', 'min:0', 'max:99999'],
             'shipping_cost' => ['nullable', 'numeric', 'min:0', 'max:99999'],
-        ], [], ['buyer_name' => 'Käufer', 'sale_price.*' => 'Verkaufspreis', 'shipping_cost' => 'Versandkosten']);
+        ], [], ['buyer_name' => 'Käufer', 'total' => 'Gesamtpreis', 'sale_price.*' => 'Verkaufspreis', 'shipping_cost' => 'Versandkosten']);
         $pickup = $request->boolean('pickup');
+        // Konvolut: Gesamtpreis anteilig verteilen, damit Rabatt je Artikel stimmt.
+        $shares = ($data['price_mode'] ?? 'total') === 'total' && isset($data['total'])
+            ? Bundle::distribute($articles, (float) $data['total'])
+            : array_filter($data['sale_price'] ?? [], fn ($price) => $price !== null);
 
-        DB::transaction(function () use ($articles, $data, $pickup, $request) {
+        $bundle = DB::transaction(function () use ($articles, $data, $pickup, $request, $shares) {
             $bundle = Bundle::create(['buyer_name' => $data['buyer_name']]);
             foreach ($articles->values() as $index => $article) {
                 $article->update([
@@ -100,16 +110,18 @@ class BatchArticleController extends Controller
                     'bundle_id' => $bundle->id,
                     'buyer_name' => $data['buyer_name'],
                     'buyer_address' => $data['buyer_address'] ?? null,
-                    'sale_price' => $data['sale_price'][$article->id] ?? $article->price,
-                    // Versand einmal für den ganzen Sammelverkauf, beim ersten Artikel.
+                    'sale_price' => $shares[$article->id] ?? $article->sale_price ?? $article->price,
+                    // Versand einmal für die ganze Bestellung, beim ersten Artikel.
                     'shipping_cost' => $pickup ? null : ($index === 0 ? ($data['shipping_cost'] ?? null) : 0),
                     'pickup' => $pickup,
                     'paid' => $request->boolean('paid'),
                 ]);
             }
+
+            return $bundle;
         });
 
-        return 'Sammelverkauf an '.$data['buyer_name'].' mit '.self::count($articles->count()).' angelegt.';
+        return 'Bestellung von '.$data['buyer_name'].' mit '.self::count($articles->count()).' angelegt.';
     }
 
     private function selected(Request $request): Collection

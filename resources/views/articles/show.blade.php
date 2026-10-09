@@ -83,9 +83,9 @@
                     <dt class="text-gray-500">Status</dt>
                     <dd><x-sale-badge :article="$article" /></dd>
                     @if ($article->sold && $article->bundle)
-                        <dt class="text-gray-500">Sammelverkauf</dt>
+                        <dt class="text-gray-500">Bestellung</dt>
                         <dd class="text-gray-900">
-                            {{ $article->bundle->articles->count() }} Artikel, zusammen
+                            <a href="{{ route('orders.show', $article->bundle) }}" class="font-medium text-violet-700 underline hover:text-violet-900">{{ $article->bundle->articles->count() }} Artikel</a>, zusammen
                             <span class="font-semibold">{{ \App\Models\Article::euro($article->bundle->amountDue()) }}</span>
                             <div class="mt-1 flex flex-wrap gap-1.5">
                                 @foreach ($article->bundle->articles->except($article->id) as $sibling)

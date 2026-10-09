@@ -38,7 +38,7 @@
                             <span class="absolute right-2 top-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800" title="Seit {{ $days }} Tagen verfügbar">{{ $days }} Tage</span>
                         @endif
                         @if ($article->bundle_id)
-                            <span class="absolute right-2 top-2 rounded-full bg-violet-600 px-2 py-0.5 text-xs font-semibold text-white" title="Teil eines Sammelverkaufs">Sammel</span>
+                            <span class="absolute right-2 top-2 rounded-full bg-violet-600 px-2 py-0.5 text-xs font-semibold text-white" title="Teil einer Bestellung">Bestellung</span>
                         @endif
                         <div x-show="selecting" x-cloak class="absolute inset-0 flex items-start justify-end p-2" :class="selected[{{ $article->id }}] ? 'bg-violet-500/15' : ''">
                             <span class="flex h-7 w-7 items-center justify-center rounded-full border-2 text-sm font-bold shadow"
@@ -112,8 +112,11 @@
                     </div>
                 </template>
                 <template x-if="active">
-                    <div class="flex w-full items-center gap-3">
-                        <span class="flex-1 text-sm text-gray-700" x-text="message || 'Tippe auf die verkauften Artikel.'"></span>
+                    <div class="flex w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
+                        <span class="min-w-[10rem] flex-1 text-sm text-gray-700" x-text="message || 'Tippe auf die verkauften Artikel.'"></span>
+                        <button type="button" x-show="soldNow.length >= 2" x-on:click="bundleSoldNow()"
+                                class="shrink-0 rounded-md border border-violet-300 bg-violet-50 px-4 py-3 text-base font-semibold text-violet-800 active:bg-violet-100"
+                                x-text="`Als Bestellung (${soldNow.length})`"></button>
                         <button type="button" x-on:click="setActive(false)"
                                 class="shrink-0 rounded-md bg-green-600 px-6 py-3 text-base font-semibold text-white active:bg-green-700">
                             Fertig

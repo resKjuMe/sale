@@ -53,7 +53,7 @@ class PendingController extends Controller
         abort_if($flag !== 'paid' && ($flag === 'picked_up') !== $article->pickup, 422, 'Passt nicht zur Übergabeart.');
         $article->update([$flag => true]);
         $others = $article->bundle_id ? Article::where('bundle_id', $article->bundle_id)->count() - 1 : 0;
-        $subject = $others ? "Sammelverkauf ({$article->displayTitle()} und {$others} weitere)" : "„{$article->displayTitle()}“";
+        $subject = $others ? "Bestellung ({$article->displayTitle()} und {$others} weitere)" : "„{$article->displayTitle()}“";
 
         return back()
             ->with('status', "$subject als ".self::LABELS[$flag].' markiert.')

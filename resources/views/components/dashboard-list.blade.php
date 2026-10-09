@@ -25,7 +25,7 @@
         <ul class="divide-y divide-gray-100">
             @php($shownBundles = [])
             @foreach ($articles as $article)
-                {{-- Sammelverkauf als eine Zeile; Schnell-Buttons wirken über den ersten Artikel auf alle. --}}
+                {{-- Bestellung als eine Zeile; Schnell-Buttons wirken über den ersten Artikel auf alle. --}}
                 @continue($article->bundle_id && in_array($article->bundle_id, $shownBundles, true))
                 @php($group = $article->bundle_id ? $article->bundle->articles : null)
                 @if ($group)
@@ -34,7 +34,7 @@
                 @php($flag = $mark === 'shipped' && $article->pickup ? 'picked_up' : $mark)
                 @php($markLabel = $flag ? $labels[$flag] : null)
                 <li class="flex items-center transition hover:bg-gray-50">
-                    <a href="{{ route($edit ? 'articles.edit' : 'articles.show', $article) }}" class="flex min-w-0 flex-1 items-center gap-3 py-2.5 ps-3 pe-2 sm:px-4">
+                    <a href="{{ $group && ! $edit ? route('orders.show', $article->bundle_id) : route($edit ? 'articles.edit' : 'articles.show', $article) }}" class="flex min-w-0 flex-1 items-center gap-3 py-2.5 ps-3 pe-2 sm:px-4">
                         <img src="{{ $article->imageUrl() }}" alt="" loading="lazy" class="h-12 w-12 shrink-0 rounded-md bg-gray-100 object-cover">
                         @php($price = $group ? $group->sum(fn ($a) => $a->effectiveSalePrice() ?? 0) : $article->effectiveSalePrice())
                         @php($shipping = $group ? $group->sum(fn ($a) => (float) $a->shipping_cost) : (float) $article->shipping_cost)
@@ -43,7 +43,7 @@
                         <div class="min-w-0 flex-1">
                             <div class="truncate text-sm font-medium text-gray-900">
                                 @if ($group)
-                                    <span class="me-1 rounded bg-violet-100 px-1.5 py-0.5 text-xs font-semibold text-violet-800">Sammelverkauf</span>{{ $group->count() }} Artikel
+                                    <span class="me-1 rounded bg-violet-100 px-1.5 py-0.5 text-xs font-semibold text-violet-800">Bestellung</span>{{ $group->count() }} Artikel
                                 @else
                                     {{ $article->displayTitle() }}
                                 @endif
@@ -67,9 +67,11 @@
                         <div class="shrink-0 text-right">
                             <div class="text-sm font-semibold tabular-nums text-gray-900">{{ $due > 0 ? \App\Models\Article::euro($due) : '–' }}</div>
                             <div class="hidden text-xs tabular-nums text-gray-500 sm:block">{{ $breakdown }}</div>
-                            @unless ($group)
+                            @if (! $group)
                                 <x-price-difference :article="$article" />
-                            @endunless
+                            @elseif ($discount = $article->bundle->discount())
+                                <span @class(['whitespace-nowrap text-xs font-medium', 'text-rose-600' => $discount > 0, 'text-green-600' => $discount < 0])>{{ $discount > 0 ? '−' : '+' }}{{ \App\Models\Article::euro(abs($discount)) }}</span>
+                            @endif
                         </div>
                     </a>
                     @if ($markLabel)

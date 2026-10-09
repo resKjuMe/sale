@@ -62,19 +62,19 @@
                 </div>
             </form>
 
-            <section class="{{ $card }}">
-                <h3 class="font-semibold text-gray-900">Als Sammelverkauf verkaufen</h3>
-                @if (! $allAvailable)
-                    <p class="mt-1 text-sm text-gray-500">Geht nur, wenn alle ausgewählten Artikel noch verfügbar sind.</p>
+            <section id="bestellung" class="{{ $card }} scroll-mt-4">
+                <h3 class="font-semibold text-gray-900">Zu einer Bestellung zusammenfassen</h3>
+                @if (! $bundleable)
+                    <p class="mt-1 text-sm text-gray-500">Mindestens ein ausgewählter Artikel gehört schon zu einer Bestellung.</p>
                 @else
-                    <p class="mt-1 text-sm text-gray-500">Ein Käufer, Versand einmal; „Bezahlt" und „Versendet" gelten danach für alle Artikel gemeinsam.</p>
-                    <form method="POST" action="{{ route('articles.batch.update') }}" class="mt-4 space-y-4" x-data="{ pickup: false }">
+                    <p class="mt-1 text-sm text-gray-500">Ein Käufer, Versand einmal; „Bezahlt" und „Versendet" gelten danach für alle Artikel gemeinsam. Geht auch mit schon verkauften Artikeln.</p>
+                    <form method="POST" action="{{ route('articles.batch.update') }}" class="mt-4 space-y-4" x-data="{ pickup: false, mode: @js(old('price_mode', 'total')) }">
                         @include('articles.partials.batch-hidden')
                         <input type="hidden" name="action" value="bundle">
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div>
                                 <x-input-label for="buyer_name" value="An wen" />
-                                <x-text-input id="buyer_name" name="buyer_name" type="text" required class="mt-1 block w-full" :value="old('buyer_name')" />
+                                <x-text-input id="buyer_name" name="buyer_name" type="text" required class="mt-1 block w-full" :value="old('buyer_name', $articles->pluck('buyer_name')->filter()->first())" />
                             </div>
                             <div x-show="! pickup">
                                 <x-input-label for="shipping_cost" value="Versandkosten gesamt in €" />
@@ -82,18 +82,32 @@
                             </div>
                             <div class="sm:col-span-2" x-show="! pickup">
                                 <x-input-label for="buyer_address" value="Adresse" />
-                                <textarea id="buyer_address" name="buyer_address" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('buyer_address') }}</textarea>
+                                <textarea id="buyer_address" name="buyer_address" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('buyer_address', $articles->pluck('buyer_address')->filter()->first()) }}</textarea>
                             </div>
                         </div>
                         <div>
-                            <x-input-label value="Verkaufspreis je Artikel in €" />
-                            <ul class="mt-1 divide-y divide-gray-100 rounded-md border border-gray-200">
+                            <div class="flex flex-wrap gap-2">
+                                @foreach (['total' => 'Gesamtpreis (Konvolut)', 'each' => 'Preis je Artikel'] as $value => $label)
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="price_mode" value="{{ $value }}" x-model="mode" class="peer sr-only">
+                                        <span class="inline-block rounded-full border border-gray-300 px-3 py-1 text-sm text-gray-700 peer-checked:border-gray-800 peer-checked:bg-gray-800 peer-checked:text-white">{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <div x-show="mode === 'total'" class="mt-3">
+                                @php($listTotal = $articles->sum(fn ($a) => (float) $a->price))
+                                <x-text-input name="total" type="text" inputmode="decimal" class="block w-40" placeholder="0,00"
+                                              :value="old('total', $listTotal > 0 ? str_replace('.', ',', number_format($listTotal, 2, '.', '')) : null)" />
+                                <p class="mt-1 text-xs text-gray-500">Angebotspreise zusammen: {{ \App\Models\Article::euro($listTotal) ?? '–' }}. Der Gesamtpreis wird anteilig verteilt, der Rabatt zählt je Artikel.</p>
+                            </div>
+                            <ul x-show="mode === 'each'" x-cloak class="mt-3 divide-y divide-gray-100 rounded-md border border-gray-200">
                                 @foreach ($articles as $article)
                                     <li class="flex items-center gap-3 px-3 py-2">
                                         <img src="{{ $article->imageUrl() }}" alt="" class="h-10 w-10 shrink-0 rounded bg-gray-100 object-cover">
                                         <span class="min-w-0 flex-1 truncate text-sm text-gray-700">{{ $article->displayTitle() }}</span>
+                                        @php($current = $article->sale_price ?? $article->price)
                                         <input type="text" name="sale_price[{{ $article->id }}]" inputmode="decimal" placeholder="0,00"
-                                               value="{{ old('sale_price.'.$article->id, $article->price !== null ? str_replace('.', ',', $article->price) : '') }}"
+                                               value="{{ old('sale_price.'.$article->id, $current !== null ? str_replace('.', ',', $current) : '') }}"
                                                class="w-24 rounded-md border-gray-300 text-right text-sm shadow-sm focus:border-gray-500 focus:ring-gray-500">
                                     </li>
                                 @endforeach
@@ -102,7 +116,7 @@
                         <div class="flex flex-wrap items-center gap-x-8 gap-y-3">
                             <x-toggle name="pickup" label="Selbstabholung" model="pickup" />
                             <div x-data="{ paid: false }"><x-toggle name="paid" label="Bezahlt" model="paid" /></div>
-                            <x-primary-button class="ms-auto">Sammelverkauf anlegen</x-primary-button>
+                            <x-primary-button class="ms-auto">Bestellung anlegen</x-primary-button>
                         </div>
                     </form>
                 @endif

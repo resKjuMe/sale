@@ -23,7 +23,7 @@ class Article extends Model
 
     public const STALE_DAYS = 30;
 
-    // Gelten für alle Artikel eines Sammelverkaufs gemeinsam.
+    // Gelten für alle Artikel einer Bestellung gemeinsam.
     public const BUNDLE_SHARED = ['buyer_name', 'buyer_address', 'paid', 'pickup', 'picked_up', 'shipped', 'tracking_code'];
 
     private static bool $syncingBundle = false;
@@ -146,7 +146,7 @@ class Article extends Model
         return $this->sold ? null : (int) $this->created_at->diffInDays(now());
     }
 
-    // Statusänderungen an einem Artikel eines Sammelverkaufs auf die übrigen übertragen.
+    // Statusänderungen an einem Artikel einer Bestellung auf die übrigen übertragen.
     private function syncBundle(): void
     {
         $bundleId = $this->getOriginal('bundle_id') ?? $this->bundle_id;
@@ -157,7 +157,7 @@ class Article extends Model
         self::$syncingBundle = true;
         try {
             if ($this->bundle_id === null) {
-                // Aus dem Sammelverkauf gelöst (z. B. wieder verfügbar); leere Bündel aufräumen.
+                // Aus der Bestellung gelöst (z. B. wieder verfügbar); leere Bestellungen aufräumen.
                 Bundle::whereKey($bundleId)->whereDoesntHave('articles')->delete();
 
                 return;

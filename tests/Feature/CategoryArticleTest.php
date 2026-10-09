@@ -919,7 +919,7 @@ class CategoryArticleTest extends TestCase
 
         $this->get(route('categories.show', $bodys))->assertSee(['Auswählen', 'batchUrl']);
         $this->get(route('articles.batch.edit', ['ids' => $ids, 'back' => route('articles.index')]))->assertOk()
-            ->assertSee(['3 Artikel bearbeiten', 'In andere Kategorie verschieben', 'Preis ändern', 'Geht nur, wenn alle ausgewählten Artikel noch verfügbar sind.']);
+            ->assertSee(['3 Artikel bearbeiten', 'In andere Kategorie verschieben', 'Preis ändern', 'Zu einer Bestellung zusammenfassen']);
 
         $this->post(route('articles.batch.update'), ['ids' => $ids, 'back' => route('articles.index'), 'action' => 'price', 'mode' => 'percent', 'value' => '20', 'round' => '1'])
             ->assertRedirect(route('articles.index'))
@@ -945,13 +945,14 @@ class CategoryArticleTest extends TestCase
         $b = $category->articles()->create(['image_path' => 'articles/b.jpg', 'title' => 'Body B', 'brand' => 'Zara', 'size' => '74', 'price' => 6]);
         $c = $category->articles()->create(['image_path' => 'articles/c.jpg', 'title' => 'Body C', 'brand' => 'Zara', 'size' => '74', 'price' => 4]);
 
-        $this->get(route('articles.batch.edit', ['ids' => [$a->id, $b->id, $c->id]]))->assertSee('Sammelverkauf anlegen');
+        $this->get(route('articles.batch.edit', ['ids' => [$a->id, $b->id, $c->id]]))->assertSee('Bestellung anlegen');
         $this->post(route('articles.batch.update'), [
             'ids' => [$a->id, $b->id, $c->id], 'action' => 'bundle',
             'buyer_name' => 'Erika', 'buyer_address' => 'Weg 1',
+            'price_mode' => 'each',
             'sale_price' => [$a->id => '4,50', $b->id => '6', $c->id => ''],
             'shipping_cost' => '5,49',
-        ])->assertSessionHas('status', 'Sammelverkauf an Erika mit 3 Artikel angelegt.');
+        ])->assertSessionHas('status', 'Bestellung von Erika mit 3 Artikel angelegt.');
 
         [$a, $b, $c] = [$a->fresh(), $b->fresh(), $c->fresh()];
         $this->assertNotNull($a->bundle_id);
@@ -962,11 +963,11 @@ class CategoryArticleTest extends TestCase
         $this->assertSame(19.99, $a->bundle->amountDue());
 
         $this->get(route('dashboard'))
-            ->assertSeeTextInOrder(['Zahlung ausstehend', 'Sammelverkauf', '3 Artikel', 'Body A, Body B, Body C', '19,99 €', 'VK 14,50 € + 5,49 € Versand']);
-        $this->get(route('articles.show', $b))->assertSeeTextInOrder(['Sammelverkauf', '3 Artikel, zusammen', '19,99 €', 'Body A', 'Body C']);
+            ->assertSeeTextInOrder(['Zahlung ausstehend', 'Bestellung', '3 Artikel', 'Body A, Body B, Body C', '19,99 €', 'VK 14,50 € + 5,49 € Versand']);
+        $this->get(route('articles.show', $b))->assertSeeTextInOrder(['Bestellung', '3 Artikel, zusammen', '19,99 €', 'Body A', 'Body C']);
 
         $this->from(route('dashboard'))->patch(route('articles.mark', [$a, 'paid']))
-            ->assertSessionHas('status', 'Sammelverkauf (Body A und 2 weitere) als bezahlt markiert.');
+            ->assertSessionHas('status', 'Bestellung (Body A und 2 weitere) als bezahlt markiert.');
         $this->assertTrue($b->fresh()->paid && $c->fresh()->paid);
         $this->assertNotNull($c->fresh()->paid_at);
 
@@ -981,7 +982,8 @@ class CategoryArticleTest extends TestCase
         $this->assertSame(0, Bundle::count());
 
         $sold = $category->articles()->create(['image_path' => 'articles/d.jpg', 'brand' => 'Zara', 'size' => '74', 'sold' => true]);
-        $this->post(route('articles.batch.update'), ['ids' => [$a->id, $sold->id], 'action' => 'bundle', 'buyer_name' => 'Max'])->assertSessionHasErrors('ids');
+        $this->post(route('articles.batch.update'), ['ids' => [$a->id, $sold->id], 'action' => 'bundle', 'buyer_name' => 'Max'])->assertSessionHasNoErrors();
+        $this->post(route('articles.batch.update'), ['ids' => [$b->id, $sold->id], 'action' => 'bundle', 'buyer_name' => 'Max'])->assertSessionHasErrors('ids');
     }
 
     public function test_stale_filter_lists_articles_available_for_more_than_thirty_days(): void
