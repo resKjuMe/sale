@@ -655,4 +655,23 @@ class CategoryArticleTest extends TestCase
             ->getContent();
         $this->assertDoesNotMatchRegularExpression('/(?<![\d.])0,00 €/u', $html);
     }
+
+    public function test_price_difference_and_dashboard_breakdown_are_internal_only(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $category->articles()->createMany([
+            ['image_path' => 'articles/a.jpg', 'title' => 'Mit Rabatt', 'brand' => 'Zara', 'size' => '74', 'price' => 10, 'sale_price' => 8, 'shipping_cost' => 4.5, 'sold' => true],
+            ['image_path' => 'articles/b.jpg', 'title' => 'Teurer', 'brand' => 'Zara', 'size' => '74', 'price' => 10, 'sale_price' => 11, 'sold' => true, 'paid' => true],
+            ['image_path' => 'articles/c.jpg', 'title' => 'Gleich', 'brand' => 'Zara', 'size' => '74', 'price' => 6, 'sale_price' => 6, 'sold' => true, 'paid' => true, 'shipped' => true],
+        ]);
+
+        $this->get(route('categories.show', $category))->assertSee(['−2,00 €', '+1,00 €'])->assertDontSee('±');
+        $this->get(route('articles.index'))->assertSee(['−2,00 €', '+1,00 €']);
+        $this->get($category->publicUrl())->assertDontSee(['−2,00 €', '+1,00 €']);
+
+        $this->get(route('dashboard'))
+            ->assertSeeInOrder(['Zahlung ausstehend', 'Mit Rabatt', '12,50 €', 'VK 8,00 € + 4,50 € Versand', '−2,00 €'])
+            ->assertSeeInOrder(['Versand ausstehend', 'Mit Rabatt', '12,50 €', 'Teurer', '11,00 €', 'VK 11,00 €, ohne Versand', '+1,00 €'])
+            ->assertSeeInOrder(['Zuletzt verkauft', 'Gleich', '6,00 €', 'VK 6,00 €, ohne Versand']);
+    }
 }

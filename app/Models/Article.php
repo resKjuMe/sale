@@ -114,6 +114,24 @@ class Article extends Model
         return null;
     }
 
+    // Verkaufs- minus Angebotspreis, nur wenn beide erfasst sind und sich unterscheiden.
+    public function priceDifference(): ?float
+    {
+        if ((float) $this->sale_price <= 0 || (float) $this->price <= 0) {
+            return null;
+        }
+        $difference = round((float) $this->sale_price - (float) $this->price, 2);
+
+        return $difference == 0 ? null : $difference;
+    }
+
+    public function formattedPriceDifference(): ?string
+    {
+        $difference = $this->priceDifference();
+
+        return $difference === null ? null : ($difference < 0 ? '−' : '+').self::euro(abs($difference));
+    }
+
     // Was der Käufer insgesamt zahlt.
     public function amountDue(): float
     {

@@ -49,7 +49,7 @@
                         <div class="mt-1 flex items-center justify-between gap-2 text-sm">
                             @if ($article->sold)
                                 <span x-show="! changed[{{ $article->id }}]" class="truncate text-gray-500">{{ $article->buyer_name ? 'an '.$article->buyer_name : 'verkauft' }}@if ($article->sold_at) · {{ $article->statusDate('sold', 'd.m.') }}@endif</span>
-                                <span x-show="! changed[{{ $article->id }}]" class="shrink-0 font-semibold text-gray-900">{{ $article->formattedSalePrice() }}</span>
+                                <span x-show="! changed[{{ $article->id }}]" class="shrink-0 text-right font-semibold text-gray-900">{{ $article->formattedSalePrice() }}<x-price-difference :article="$article" class="ml-1" /></span>
                             @endif
                             <span x-show="{{ $article->sold ? 'changed['.$article->id.'] && ' : '' }}! sold[{{ $article->id }}]" @if ($article->sold) x-cloak @endif
                                   class="truncate text-gray-500">{{ $article->condition?->label() }}</span>

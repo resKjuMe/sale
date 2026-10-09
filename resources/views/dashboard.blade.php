@@ -39,7 +39,7 @@
             </div>
 
             <div class="grid gap-6 lg:grid-cols-2">
-                <x-dashboard-list title="Zahlung ausstehend" accent="amber" due :articles="$paymentPending" :count="$paymentPendingCount"
+                <x-dashboard-list title="Zahlung ausstehend" accent="amber" :articles="$paymentPending" :count="$paymentPendingCount"
                                   :href="route('articles.index', ['pending' => ['payment']])" empty="Alle Verkäufe sind bezahlt." />
                 <x-dashboard-list title="Versand ausstehend" accent="amber" :articles="$shippingPending" :count="$shippingPendingCount"
                                   :href="route('articles.index', ['pending' => ['shipping']])" empty="Nichts zu verschicken." />

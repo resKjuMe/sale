@@ -1,4 +1,4 @@
-@props(['title', 'articles', 'count' => null, 'href' => null, 'empty', 'accent' => 'gray', 'due' => false])
+@props(['title', 'articles', 'count' => null, 'href' => null, 'empty', 'accent' => 'gray'])
 
 <section class="flex flex-col bg-white shadow-sm sm:rounded-lg">
     <header class="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
@@ -30,15 +30,17 @@
                             <div class="truncate text-xs text-gray-500">
                                 {{ $article->buyer_name ? 'an '.$article->buyer_name : $article->category->name }}
                                 · {{ $article->brand }} · Gr. {{ $article->size }}
+                                @if ($label = $article->soldSinceLabel())
+                                    @php($overdue = $accent === 'amber' && $article->sold_at->copy()->diffInDays(now()) >= 7)
+                                    · <span @class(['font-medium text-amber-700' => $overdue])>{{ $label }}</span>
+                                @endif
                             </div>
                         </div>
                         <div class="shrink-0 text-right">
-                            @php($amount = $due ? $article->amountDue() : $article->effectiveSalePrice())
-                            <div class="text-sm font-semibold text-gray-900" @if ($due && $article->shipping_cost > 0) title="inkl. {{ $article->formattedShippingCost() }} Versand" @endif>{{ $amount > 0 ? \App\Models\Article::euro($amount) : '–' }}</div>
-                            @if ($label = $article->soldSinceLabel())
-                                @php($days = (int) $article->sold_at->copy()->diffInDays(now()))
-                                <div @class(['text-xs', 'font-medium text-amber-700' => $accent === 'amber' && $days >= 7, 'text-gray-500' => ! ($accent === 'amber' && $days >= 7)])>{{ $label }}</div>
-                            @endif
+                            @php($price = $article->effectiveSalePrice())
+                            <div class="text-sm font-semibold tabular-nums text-gray-900">{{ $article->amountDue() > 0 ? \App\Models\Article::euro($article->amountDue()) : '–' }}</div>
+                            <div class="text-xs tabular-nums text-gray-500">{{ ((float) $article->sale_price > 0 ? 'VK ' : 'Preis ').($price ? \App\Models\Article::euro($price) : '–').((float) $article->shipping_cost > 0 ? ' + '.$article->formattedShippingCost().' Versand' : ', ohne Versand') }}</div>
+                            <x-price-difference :article="$article" />
                         </div>
                     </a>
                 </li>
