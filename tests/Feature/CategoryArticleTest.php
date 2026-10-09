@@ -857,7 +857,7 @@ class CategoryArticleTest extends TestCase
         $article = $category->articles()->create(['image_path' => 'articles/main.jpg', 'brand' => 'x', 'size' => 'y']);
         $article->images()->create(['path' => 'articles/label.jpg']);
 
-        $fake = new class('test-key', 'claude-opus-5-5') extends ArticleAssistant
+        $fake = new class('test-key', ['brand_size' => 'claude-sonnet-5-5', 'title' => 'claude-haiku-5-5']) extends ArticleAssistant
         {
             public array $calls = [];
 
@@ -898,7 +898,7 @@ class CategoryArticleTest extends TestCase
         $article->images()->create(['path' => 'articles/label.jpg']);
         $unclear = $category->articles()->create(['image_path' => 'articles/main.jpg', 'title' => 'Bleibt', 'brand' => 'H&M', 'size' => '80']);
 
-        $fake = new class('test-key', 'claude-opus-5-5') extends ArticleAssistant
+        $fake = new class('test-key', ['brand_size' => 'claude-sonnet-5-5', 'title' => 'claude-haiku-5-5']) extends ArticleAssistant
         {
             public array $calls = [];
 
@@ -925,7 +925,7 @@ class CategoryArticleTest extends TestCase
 
     public function test_ai_suggestion_reports_missing_api_key(): void
     {
-        $this->app->instance(ArticleAssistant::class, new ArticleAssistant(null, 'claude-opus-5-5'));
+        $this->app->instance(ArticleAssistant::class, new ArticleAssistant(null, ['brand_size' => 'claude-sonnet-5-5', 'title' => 'claude-haiku-5-5']));
         $article = Category::create(['name' => 'Bodys'])->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74']);
         $this->get(route('articles.edit', $article))->assertOk()->assertDontSee(['Titel vorschlagen', 'aiSuggest(']);
         $this->get(route('categories.show', $article->category))->assertOk()->assertDontSee('aiTitles(');
@@ -942,6 +942,7 @@ class CategoryArticleTest extends TestCase
 
         [$width, $height, $type] = getimagesizefromstring($small);
         $this->assertSame([1568, 784, IMAGETYPE_JPEG], [$width, $height, $type]);
+        $this->assertSame([800, 400], array_slice(getimagesizefromstring(ArticleAssistant::shrink($big, 800)), 0, 2));
     }
 
     public function test_batch_edit_moves_category_and_changes_prices_of_available_articles(): void

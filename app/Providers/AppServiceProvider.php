@@ -14,7 +14,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(ArticleAssistant::class, fn () => new ArticleAssistant(
             config('services.anthropic.key'),
-            config('services.anthropic.model'),
+            config('services.anthropic.models'),
             config('services.anthropic.workspace'),
         ));
     }

@@ -59,7 +59,7 @@ class TenancyTest extends TestCase
         $this->put(route('articles.update', $this->aliceArticle), ['brand' => 'X', 'size' => '1'])->assertNotFound();
         $this->delete(route('articles.destroy', $this->aliceArticle))->assertNotFound();
         $this->patch(route('articles.mark', [$this->aliceArticle, 'paid']))->assertNotFound();
-        $this->app->instance(ArticleAssistant::class, new ArticleAssistant('test-key', 'claude-opus-5-5'));
+        $this->app->instance(ArticleAssistant::class, new ArticleAssistant('test-key', ['brand_size' => 'claude-sonnet-5-5', 'title' => 'claude-haiku-5-5']));
         $this->postJson(route('articles.ai-suggest'), ['mode' => 'title', 'article_id' => $this->aliceArticle->id])->assertNotFound();
 
         $this->post(route('articles.batch.update'), ['ids' => [$this->aliceArticle->id], 'action' => 'price', 'mode' => 'set', 'value' => '1'])

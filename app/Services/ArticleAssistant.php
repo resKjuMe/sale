@@ -16,8 +16,11 @@ class ArticleAssistant
 {
     public const MODES = ['brand_size', 'title'];
 
-    // Für Etiketten reicht das; spart gegenüber voller Auflösung Bild-Tokens.
-    private const MAX_EDGE = 1568;
+    // Etiketten brauchen Auflösung, für den Titel reicht eine grobe Ansicht.
+    private const MAX_EDGE = ['brand_size' => 1568, 'title' => 800];
+
+    // Haiku kennt keinen serverseitigen Refusal-Fallback.
+    private const WITHOUT_FALLBACK = 'claude-haiku-';
 
     private const SYSTEM = <<<'TXT'
         Du hilfst beim Erfassen gebrauchter Kinderkleidung, die privat verkauft wird.
@@ -27,7 +30,8 @@ class ArticleAssistant
 
     public function __construct(
         private readonly ?string $apiKey,
-        private readonly string $model,
+        /** @var array<string, string> Modell je Modus */
+        private readonly array $models,
         private readonly ?string $workspaceId = null,
     ) {}
 
@@ -48,23 +52,27 @@ class ArticleAssistant
         }
 
         $content = array_map(
-            fn (string $image) => BetaImageBlockParam::with(source: BetaBase64ImageSource::with(data: base64_encode(self::shrink($image)), mediaType: 'image/jpeg')),
+            fn (string $image) => BetaImageBlockParam::with(source: BetaBase64ImageSource::with(data: base64_encode(self::shrink($image, self::MAX_EDGE[$mode])), mediaType: 'image/jpeg')),
             $images,
         );
         $content[] = BetaTextBlockParam::with(text: $this->instruction($mode, $context));
 
+        $model = $this->models[$mode];
+        $params = [
+            'model' => $model,
+            'maxTokens' => 16000,
+            'system' => self::SYSTEM,
+            'messages' => [['role' => 'user', 'content' => $content]],
+            'outputConfig' => ['effort' => 'low', 'format' => ['type' => 'json_schema', 'schema' => self::schema()]],
+            'workspaceID' => $this->workspaceId ?: null,
+        ];
+        if (! str_starts_with($model, self::WITHOUT_FALLBACK)) {
+            // Lehnt das Modell aus Richtlinien-Gründen ab, versucht die API es serverseitig mit dem Standard-Ersatzmodell.
+            $params += ['fallbacks' => 'default', 'betas' => ['server-side-fallback-2026-07-01']];
+        }
+
         try {
-            $message = (new Client(apiKey: $this->apiKey))->beta->messages->create(
-                model: $this->model,
-                maxTokens: 16000,
-                system: self::SYSTEM,
-                messages: [['role' => 'user', 'content' => $content]],
-                outputConfig: ['effort' => 'low', 'format' => ['type' => 'json_schema', 'schema' => self::schema()]],
-                // Lehnt das Modell aus Richtlinien-Gründen ab, versucht die API es serverseitig mit dem Standard-Ersatzmodell.
-                fallbacks: 'default',
-                betas: ['server-side-fallback-2026-07-01'],
-                workspaceID: $this->workspaceId ?: null,
-            );
+            $message = (new Client(apiKey: $this->apiKey))->beta->messages->create(...$params);
         } catch (APIException $e) {
             throw new RuntimeException('Die KI ist gerade nicht erreichbar. Bitte später erneut versuchen.', previous: $e);
         }
@@ -130,7 +138,7 @@ class ArticleAssistant
         return is_string($value) && trim($value) !== '' ? mb_substr(trim($value), 0, 255) : null;
     }
 
-    public static function shrink(string $image): string
+    public static function shrink(string $image, int $maxEdge = self::MAX_EDGE['brand_size']): string
     {
         $source = @imagecreatefromstring($image);
         if ($source === false) {
@@ -139,7 +147,7 @@ class ArticleAssistant
 
         $width = imagesx($source);
         $height = imagesy($source);
-        $scale = min(1, self::MAX_EDGE / max($width, $height));
+        $scale = min(1, $maxEdge / max($width, $height));
         $target = imagescale($source, max(1, (int) round($width * $scale)), max(1, (int) round($height * $scale)));
 
         $stream = fopen('php://memory', 'w+b');
