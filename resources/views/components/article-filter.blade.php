@@ -13,11 +13,12 @@
         @foreach ($groups as $name => [$label, $options, $selected])
             <div class="flex flex-wrap items-center gap-2">
                 <span class="w-14 shrink-0 text-sm font-medium text-gray-700">{{ $label }}</span>
-                @foreach ($options as $option)
+                @foreach ($options as $option => $count)
+                    @php($option = (string) $option)
                     <label class="cursor-pointer">
                         <input type="checkbox" name="{{ $name }}[]" value="{{ $option }}" class="peer sr-only"
                                onchange="this.form.submit()" @checked(in_array($option, $selected, true))>
-                        <span class="inline-block rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 transition hover:border-gray-400 peer-checked:border-gray-800 peer-checked:bg-gray-800 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-gray-500">{{ $option }}</span>
+                        <span class="inline-block rounded-full border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 transition hover:border-gray-400 peer-checked:border-gray-800 peer-checked:bg-gray-800 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-gray-500">{{ $option }}<span @class(['ml-1 text-xs', 'text-gray-400' => ! in_array($option, $selected, true), 'text-gray-300' => in_array($option, $selected, true)])>{{ $count }}</span></span>
                     </label>
                 @endforeach
             </div>

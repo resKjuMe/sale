@@ -43,14 +43,16 @@ class ArticleFilter
     }
 
     /**
-     * @return list<string> natürlich sortiert
+     * @return array<string, int> Wert => Anzahl, natürlich sortiert
      */
     public static function options(Category $category, string $column): array
     {
-        return $category->articles()->distinct()->pluck($column)
-            ->map(fn ($value) => (string) $value)
-            ->sort(fn (string $a, string $b) => strnatcasecmp($a, $b))
-            ->values()
+        return $category->articles()->toBase()
+            ->selectRaw("$column as value, count(*) as total")
+            ->groupBy($column)
+            ->get()
+            ->mapWithKeys(fn ($row) => [(string) $row->value => (int) $row->total])
+            ->sortKeysUsing(fn ($a, $b) => strnatcasecmp((string) $a, (string) $b))
             ->all();
     }
 
