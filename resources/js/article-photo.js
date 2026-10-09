@@ -24,9 +24,29 @@ export async function downscale(file) {
 }
 
 // Alpine-Komponente: Vorschau + Verkleinerung vor dem Upload (PHP-Limit, mobile Daten).
+async function downscaleInput(input) {
+    const files = await Promise.all([...input.files].map((file) => downscale(file).catch(() => file)));
+    const transfer = new DataTransfer();
+    files.forEach((file) => transfer.items.add(file));
+    input.files = transfer.files;
+}
+
 export default (initialPreview = null) => ({
     preview: initialPreview,
     processing: false,
+    extras: [],
+
+    async pickExtras(event) {
+        const input = event.target;
+        this.extras.forEach((url) => URL.revokeObjectURL(url));
+        this.extras = [...input.files].map((file) => URL.createObjectURL(file));
+        this.processing = true;
+        try {
+            await downscaleInput(input);
+        } finally {
+            this.processing = false;
+        }
+    },
 
     async pick(event) {
         const input = event.target;

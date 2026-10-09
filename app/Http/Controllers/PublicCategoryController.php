@@ -14,7 +14,7 @@ class PublicCategoryController extends Controller
     public function show(Request $request, Category $category): View
     {
         $filter = ArticleFilter::fromRequest($request, internal: false);
-        $articles = $filter->apply($category->articles())->orderBy('sold')->latest()->get();
+        $articles = $filter->apply($category->articles())->with('images')->orderBy('sold')->latest()->get();
 
         return view('public.category', [
             'title' => $category->name,
@@ -29,7 +29,7 @@ class PublicCategoryController extends Controller
     {
         User::where('public_token', $token)->firstOrFail();
         $filter = ArticleFilter::fromRequest($request, internal: false);
-        $articles = $filter->apply(Article::query())->with('category')->orderBy('sold')->latest()->get();
+        $articles = $filter->apply(Article::query())->with(['category', 'images'])->orderBy('sold')->latest()->get();
 
         return view('public.category', [
             'title' => config('app.name'),

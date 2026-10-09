@@ -18,6 +18,10 @@ class ArticleRequest extends FormRequest
     {
         return [
             'image' => [$this->route('article') ? 'nullable' : 'required', 'image', 'max:10240'],
+            'photos' => ['nullable', 'array', 'max:'.Article::MAX_EXTRA_IMAGES],
+            'photos.*' => ['image', 'max:10240'],
+            'remove_photos' => ['nullable', 'array'],
+            'remove_photos.*' => ['integer'],
             'title' => ['nullable', 'string', 'max:255'],
             'brand' => ['required', 'string', 'max:255'],
             'size' => ['required', 'string', 'max:50'],
@@ -41,6 +45,8 @@ class ArticleRequest extends FormRequest
     {
         return [
             'image' => 'Bild',
+            'photos' => 'Weitere Fotos',
+            'photos.*' => 'Weiteres Foto',
             'title' => 'Titel',
             'brand' => 'Marke',
             'size' => 'Größe',
@@ -62,7 +68,7 @@ class ArticleRequest extends FormRequest
 
     public function articleData(): array
     {
-        $data = $this->safe()->except('image');
+        $data = $this->safe()->except(['image', 'photos', 'remove_photos']);
 
         if (array_key_exists('sold', $data) && ! $data['sold']) {
             $data = array_merge($data, Article::UNSOLD_RESET);

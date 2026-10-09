@@ -42,9 +42,20 @@
             </form>
 
             <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden md:flex">
-                <a href="{{ $article->imageUrl() }}" target="_blank" class="md:w-1/2 shrink-0">
-                    <img src="{{ $article->imageUrl() }}" alt="{{ $article->displayTitle() }}" class="w-full object-contain bg-gray-100 max-h-[70vh]">
-                </a>
+                <div class="md:w-1/2 shrink-0">
+                    <a href="{{ $article->imageUrl() }}" target="_blank" class="block">
+                        <img src="{{ $article->imageUrl() }}" alt="{{ $article->displayTitle() }}" class="w-full object-contain bg-gray-100 max-h-[70vh]">
+                    </a>
+                    @if ($article->images->isNotEmpty())
+                        <div class="flex gap-2 overflow-x-auto bg-gray-50 p-2">
+                            @foreach ($article->images as $image)
+                                <a href="{{ $image->url() }}" target="_blank" class="shrink-0">
+                                    <img src="{{ $image->url() }}" alt="" loading="lazy" class="h-20 w-20 rounded-md bg-gray-100 object-cover">
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
                 <dl class="p-6 grid grid-cols-[auto,1fr] gap-x-6 gap-y-3 content-start text-sm">
                     <dt class="text-gray-500">Titel</dt>
                     <dd class="text-gray-900">{{ $article->title ?? '–' }}</dd>

@@ -31,9 +31,13 @@
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 @foreach ($articles as $article)
                     <figure class="overflow-hidden rounded-lg bg-white shadow-sm">
-                        <a href="{{ $article->imageUrl() }}" target="_blank" class="relative block">
+                        @php($gallery = $article->images->isNotEmpty())
+                        <a href="{{ $gallery ? '#fotos-'.$article->id : $article->imageUrl() }}" @unless ($gallery) target="_blank" @endunless class="relative block">
                             <img src="{{ $article->imageUrl() }}" alt="{{ $article->displayTitle() }}" loading="lazy"
                                  @class(['aspect-square w-full bg-gray-100 object-cover', 'opacity-50 grayscale' => $article->sold])>
+                            @if ($gallery)
+                                <span class="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white">{{ count($article->imageUrls()) }} Fotos</span>
+                            @endif
                             @if ($article->sold)
                                 <span class="absolute left-2 top-2 rounded-full bg-gray-800 px-2 py-0.5 text-xs font-semibold text-white">Verkauft</span>
                             @endif
@@ -58,6 +62,19 @@
                             @endif
                         </figcaption>
                     </figure>
+                    @if ($gallery)
+                        <div id="fotos-{{ $article->id }}" class="fixed inset-0 z-50 hidden flex-col bg-black target:flex" role="dialog" aria-label="Fotos: {{ $article->displayTitle() }}">
+                            <div class="flex items-center justify-between px-4 py-3 text-sm text-white">
+                                <span class="truncate">{{ $article->displayTitle() }} · wischen für mehr</span>
+                                <a href="#" class="shrink-0 rounded-full bg-white/15 px-3 py-1 font-semibold hover:bg-white/25">Schließen</a>
+                            </div>
+                            <div class="flex flex-1 snap-x snap-mandatory overflow-x-auto">
+                                @foreach ($article->imageUrls() as $url)
+                                    <img src="{{ $url }}" alt="" loading="lazy" class="h-full w-full shrink-0 snap-center object-contain">
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                 @endforeach
             </div>
         @endif

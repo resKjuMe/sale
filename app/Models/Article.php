@@ -6,6 +6,7 @@ use App\Enums\ArticleCondition;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Article extends Model
@@ -14,6 +15,8 @@ class Article extends Model
         'image_path', 'title', 'brand', 'size', 'condition', 'price', 'vinted_url',
         'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price', 'shipping_cost', 'pickup', 'picked_up', 'shipped', 'tracking_code',
     ];
+
+    public const MAX_EXTRA_IMAGES = 8;
 
     public const STATUS_FLAGS = ['sold', 'paid', 'shipped', 'picked_up'];
 
@@ -66,6 +69,8 @@ class Article extends Model
                 }
             }
         });
+        // Zusatzfotos einzeln löschen, damit ihre Dateien mit verschwinden (die FK-Kaskade kennt keine Dateien).
+        static::deleting(fn (Article $article) => $article->images->each->delete());
         static::deleted(fn (Article $article) => Storage::disk('public')->delete($article->image_path));
     }
 
@@ -110,6 +115,19 @@ class Article extends Model
     public function handedOver(): bool
     {
         return $this->pickup ? $this->picked_up : $this->shipped;
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(ArticleImage::class)->orderBy('position')->orderBy('id');
+    }
+
+    /**
+     * @return list<string> Hauptfoto zuerst, dann die Zusatzfotos
+     */
+    public function imageUrls(): array
+    {
+        return [$this->imageUrl(), ...$this->images->map->url()];
     }
 
     public function category(): BelongsTo

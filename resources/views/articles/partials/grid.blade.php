@@ -31,6 +31,9 @@
                         @endif
                         <span x-show="sold[{{ $article->id }}] && changed[{{ $article->id }}]" x-cloak
                               class="absolute left-2 top-2 rounded-full bg-gray-800 px-2 py-0.5 text-xs font-semibold text-white">Verkauft</span>
+                        @if ($article->images_count)
+                            <span class="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white" title="{{ $article->images_count + 1 }} Fotos">+{{ $article->images_count }}</span>
+                        @endif
                         @if ($article->vinted_url)
                             <span class="absolute bottom-2 right-2 rounded-full bg-teal-600 px-2 py-0.5 text-xs font-semibold text-white" title="Auf Vinted eingestellt">Vinted</span>
                         @endif

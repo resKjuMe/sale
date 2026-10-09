@@ -809,4 +809,40 @@ class CategoryArticleTest extends TestCase
             ->assertSessionHas('status', 'Rückgängig ist nur kurz nach dem Markieren möglich – bitte im Artikel ändern.');
         $this->assertTrue($article->fresh()->shipped);
     }
+
+    public function test_extra_photos_can_be_added_removed_and_are_shown_publicly(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $this->post(route('categories.articles.store', $category), [
+            'image' => UploadedFile::fake()->image('main.jpg'),
+            'photos' => [UploadedFile::fake()->image('label.jpg'), UploadedFile::fake()->image('detail.jpg')],
+            'brand' => 'Zara',
+            'size' => '74',
+        ])->assertSessionHasNoErrors();
+
+        $article = Article::sole();
+        $this->assertCount(2, $article->images);
+        [$label, $detail] = $article->images;
+        Storage::disk('public')->assertExists([$label->path, $detail->path]);
+        $this->assertSame([$article->imageUrl(), $label->url(), $detail->url()], $article->imageUrls());
+
+        $this->get(route('categories.show', $category))->assertSee('+2');
+        $this->get($category->publicUrl())->assertSee(['3 Fotos', 'fotos-'.$article->id, $detail->url()]);
+
+        $this->put(route('articles.update', $article), [
+            'brand' => 'Zara', 'size' => '74',
+            'remove_photos' => [$label->id],
+            'photos' => [UploadedFile::fake()->image('back.jpg')],
+        ])->assertSessionHasNoErrors();
+        Storage::disk('public')->assertMissing($label->path);
+        $this->assertSame([$detail->id], $article->fresh()->images->take(1)->pluck('id')->all());
+        $this->assertCount(2, $article->fresh()->images);
+
+        $this->put(route('articles.update', $article), ['brand' => 'Zara', 'size' => '74', 'photos' => array_fill(0, 9, UploadedFile::fake()->image('x.jpg'))])
+            ->assertSessionHasErrors('photos');
+
+        $paths = $article->fresh()->images->pluck('path')->all();
+        $this->delete(route('articles.destroy', $article));
+        Storage::disk('public')->assertMissing($paths);
+    }
 }

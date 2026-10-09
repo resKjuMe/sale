@@ -17,7 +17,7 @@ class ArticleController extends Controller
     public function index(Request $request): View
     {
         $filter = ArticleFilter::fromRequest($request);
-        $articles = $filter->apply(Article::query())->with('category')->when($filter->pending, fn ($query) => $query->orderBy('sold_at'), fn ($query) => $query->latest())->paginate(100)->withQueryString();
+        $articles = $filter->apply(Article::query())->with('category')->withCount('images')->when($filter->pending, fn ($query) => $query->orderBy('sold_at'), fn ($query) => $query->latest())->paginate(100)->withQueryString();
 
         return view('articles.index', ['articles' => $articles, 'filter' => $filter, 'total' => Article::count()]);
     }
@@ -50,6 +50,7 @@ class ArticleController extends Controller
         $data['image_path'] = $request->file('image')->store('articles', 'public');
 
         $article = $category->articles()->create($data);
+        $this->syncPhotos($request, $article);
 
         if ($request->expectsJson()) {
             return response()->json(['id' => $article->id], 201);
@@ -84,6 +85,7 @@ class ArticleController extends Controller
         }
 
         $article->update($data);
+        $this->syncPhotos($request, $article);
 
         if ($oldPath !== null) {
             Storage::disk('public')->delete($oldPath);
@@ -109,6 +111,17 @@ class ArticleController extends Controller
         $article->delete();
 
         return redirect()->route('categories.show', $category)->with('status', 'Artikel gelöscht.');
+    }
+
+    private function syncPhotos(ArticleRequest $request, Article $article): void
+    {
+        $article->images()->whereIn('id', $request->input('remove_photos', []))->get()->each->delete();
+
+        $position = (int) $article->images()->max('position');
+        $free = Article::MAX_EXTRA_IMAGES - $article->images()->count();
+        foreach (array_slice($request->file('photos', []), 0, max(0, $free)) as $photo) {
+            $article->images()->create(['path' => $photo->store('articles', 'public'), 'position' => ++$position]);
+        }
     }
 
     private function suggestions(Category $category): array

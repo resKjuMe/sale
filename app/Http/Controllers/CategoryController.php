@@ -36,7 +36,7 @@ class CategoryController extends Controller
     public function show(Request $request, Category $category): View
     {
         $filter = ArticleFilter::fromRequest($request);
-        $articles = $filter->apply($category->articles())->when($filter->pending, fn ($query) => $query->orderBy('sold_at'), fn ($query) => $query->latest())->paginate(100)->withQueryString();
+        $articles = $filter->apply($category->articles())->withCount('images')->when($filter->pending, fn ($query) => $query->orderBy('sold_at'), fn ($query) => $query->latest())->paginate(100)->withQueryString();
 
         return view('categories.show', compact('category', 'articles', 'filter'));
     }

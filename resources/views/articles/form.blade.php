@@ -30,6 +30,37 @@
                     </div>
 
                     <div>
+                        <x-input-label for="photos" value="Weitere Fotos (optional, z. B. Etikett, Details)" />
+                        @if ($article->exists && $article->images->isNotEmpty())
+                            <div class="mt-2 flex flex-wrap gap-3">
+                                @foreach ($article->images as $image)
+                                    <label class="group relative block cursor-pointer">
+                                        <img src="{{ $image->url() }}" alt="" class="h-24 w-24 rounded-md bg-gray-100 object-cover transition group-has-[:checked]:opacity-30">
+                                        <input type="checkbox" name="remove_photos[]" value="{{ $image->id }}" class="peer sr-only">
+                                        <span class="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 text-xs font-semibold text-gray-700 shadow peer-checked:bg-red-600 peer-checked:text-white">
+                                            ✕
+                                        </span>
+                                        <span class="absolute inset-x-0 bottom-1 hidden text-center text-xs font-semibold text-red-700 group-has-[:checked]:block">wird entfernt</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        @endif
+                        <template x-if="extras.length">
+                            <div class="mt-2 flex flex-wrap gap-3">
+                                <template x-for="url in extras" :key="url">
+                                    <img :src="url" alt="" class="h-24 w-24 rounded-md bg-gray-100 object-cover">
+                                </template>
+                            </div>
+                        </template>
+                        <input id="photos" name="photos[]" type="file" accept="image/*" multiple
+                               x-on:change="pickExtras($event)"
+                               class="mt-2 block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-widest file:text-gray-700 hover:file:bg-gray-200">
+                        <p class="mt-1 text-xs text-gray-500">Bis zu {{ \App\Models\Article::MAX_EXTRA_IMAGES }} Fotos. Zum Entfernen ✕ antippen.</p>
+                        <x-input-error :messages="$errors->get('photos')" class="mt-2" />
+                        <x-input-error :messages="$errors->get('photos.*')" class="mt-2" />
+                    </div>
+
+                    <div>
                         <x-input-label for="title" value="Titel (optional)" />
                         <x-text-input id="title" name="title" type="text" class="mt-1 block w-full"
                                       :value="old('title', $article->title)" />
