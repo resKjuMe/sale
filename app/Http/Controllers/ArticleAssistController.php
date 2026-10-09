@@ -33,10 +33,7 @@ class ArticleAssistController extends Controller
         // Neu gewählte Fotos zuerst, danach die schon gespeicherten des Artikels.
         $images = array_map(fn (UploadedFile $file) => $file->getContent(), $request->file('images', []));
         if (isset($data['article_id'])) {
-            $article = Article::with('images')->findOrFail($data['article_id']);
-            foreach ([$article->image_path, ...$article->images->pluck('path')] as $path) {
-                $images[] = Storage::disk('public')->get($path);
-            }
+            $images = [...$images, ...$this->storedImages(Article::findOrFail($data['article_id']))];
         }
         $images = array_slice(array_values(array_filter($images)), 0, self::MAX_IMAGES);
 
@@ -56,5 +53,40 @@ class ArticleAssistController extends Controller
         }
 
         return response()->json($suggestion);
+    }
+
+    // Für „Titel per KI" auf der Kategorieseite: Vorschlag direkt speichern.
+    public function title(Article $article, ArticleAssistant $assistant): JsonResponse
+    {
+        if (! $assistant->configured()) {
+            return response()->json(['message' => 'Die KI ist nicht eingerichtet (ANTHROPIC_API_KEY fehlt).'], 503);
+        }
+
+        $images = array_slice(array_values(array_filter($this->storedImages($article))), 0, self::MAX_IMAGES);
+        if ($images === []) {
+            return response()->json(['message' => 'Der Artikel hat kein Foto.'], 422);
+        }
+
+        try {
+            $title = $assistant->suggest($images, 'title', ['brand' => $article->brand, 'size' => $article->size])['title'];
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 502);
+        }
+
+        if ($title !== null) {
+            $article->update(['title' => $title]);
+        }
+
+        return response()->json(['title' => $title]);
+    }
+
+    /**
+     * @return list<?string>
+     */
+    private function storedImages(Article $article): array
+    {
+        $paths = [$article->image_path, ...$article->images()->pluck('path')];
+
+        return array_map(fn (?string $path) => $path ? Storage::disk('public')->get($path) : null, $paths);
     }
 }

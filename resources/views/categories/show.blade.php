@@ -15,6 +15,23 @@
                 <a href="{{ route('categories.articles.create', $category) }}">
                     <x-secondary-button type="button">Neuer Artikel</x-secondary-button>
                 </a>
+                @if (app(\App\Services\ArticleAssistant::class)->configured() && $category->articles()->exists())
+                    <div x-data="aiTitles({ urls: @js($category->articles()->pluck('id')->map(fn ($id) => route('articles.ai-title', $id))) })" class="flex items-center gap-2">
+                        <button type="button" x-show="!running" x-on:click="start()"
+                                class="inline-flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-violet-800 transition hover:bg-violet-100">
+                            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 1l1.9 5.1L17 8l-5.1 1.9L10 15l-1.9-5.1L3 8l5.1-1.9L10 1zm6 10l.9 2.1L19 14l-2.1.9L16 17l-.9-2.1L13 14l2.1-.9L16 11z" /></svg>
+                            Titel per KI
+                        </button>
+                        <template x-if="running">
+                            <span class="inline-flex items-center gap-2 text-sm text-violet-800">
+                                <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" class="opacity-25" /><path d="M21 12a9 9 0 00-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" /></svg>
+                                <span x-text="`${done} / ${total}`"></span>
+                                <button type="button" x-on:click="stopping = true" :disabled="stopping" class="text-xs text-gray-500 underline hover:text-gray-700 disabled:opacity-40" x-text="stopping ? 'Stoppt …' : 'Abbrechen'"></button>
+                            </span>
+                        </template>
+                        <span x-show="message" x-cloak x-text="message" class="text-xs text-violet-700"></span>
+                    </div>
+                @endif
                 <a href="{{ route('categories.print', $category) }}" target="_blank">
                     <x-secondary-button type="button">Druckansicht</x-secondary-button>
                 </a>

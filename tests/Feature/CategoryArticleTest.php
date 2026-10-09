@@ -889,11 +889,47 @@ class CategoryArticleTest extends TestCase
         $this->postJson(route('articles.ai-suggest'), ['mode' => 'quatsch', 'article_id' => $article->id])->assertJsonValidationErrors('mode');
     }
 
+    public function test_ai_title_is_suggested_from_stored_photos_and_saved(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        Storage::disk('public')->put('articles/main.jpg', UploadedFile::fake()->image('main.jpg')->getContent());
+        Storage::disk('public')->put('articles/label.jpg', UploadedFile::fake()->image('label.jpg')->getContent());
+        $article = $category->articles()->create(['image_path' => 'articles/main.jpg', 'title' => 'Alt', 'brand' => 'Zara', 'size' => '74']);
+        $article->images()->create(['path' => 'articles/label.jpg']);
+        $unclear = $category->articles()->create(['image_path' => 'articles/main.jpg', 'title' => 'Bleibt', 'brand' => 'H&M', 'size' => '80']);
+
+        $fake = new class('test-key', 'claude-opus-5-5') extends ArticleAssistant
+        {
+            public array $calls = [];
+
+            public function suggest(array $images, string $mode, array $context = []): array
+            {
+                $this->calls[] = compact('images', 'mode', 'context');
+
+                return ['brand' => null, 'size' => null, 'title' => $context['brand'] === 'Zara' ? 'Gestreifter Body' : null];
+            }
+        };
+        $this->app->instance(ArticleAssistant::class, $fake);
+
+        $this->get(route('categories.show', $category))->assertSee(['Titel per KI', 'aiTitles(', 'ai-title'], false);
+
+        $this->postJson(route('articles.ai-title', $article))->assertOk()->assertExactJson(['title' => 'Gestreifter Body']);
+        $this->postJson(route('articles.ai-title', $unclear))->assertOk()->assertExactJson(['title' => null]);
+
+        $this->assertSame('Gestreifter Body', $article->fresh()->title);
+        $this->assertSame('Bleibt', $unclear->fresh()->title, 'Ohne Vorschlag bleibt der alte Titel.');
+        $this->assertSame('title', $fake->calls[0]['mode']);
+        $this->assertCount(2, $fake->calls[0]['images']);
+        $this->assertSame(['brand' => 'Zara', 'size' => '74'], $fake->calls[0]['context']);
+    }
+
     public function test_ai_suggestion_reports_missing_api_key(): void
     {
         $this->app->instance(ArticleAssistant::class, new ArticleAssistant(null, 'claude-opus-5-5'));
         $article = Category::create(['name' => 'Bodys'])->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74']);
         $this->get(route('articles.edit', $article))->assertOk()->assertDontSee(['Titel vorschlagen', 'aiSuggest(']);
+        $this->get(route('categories.show', $article->category))->assertOk()->assertDontSee('aiTitles(');
+        $this->postJson(route('articles.ai-title', $article))->assertStatus(503);
 
         $this->postJson(route('articles.ai-suggest'), ['mode' => 'title', 'images' => [UploadedFile::fake()->image('a.jpg')]])
             ->assertStatus(503)->assertJson(['message' => 'Die KI ist nicht eingerichtet (ANTHROPIC_API_KEY fehlt).']);
