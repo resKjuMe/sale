@@ -24,7 +24,7 @@
                         null,
                         false,
                     ],
-                    ['Noch offen', \App\Models\Article::euro($stats['openAmount']), $paymentPendingCount === 1 ? '1 Zahlung ausstehend' : $paymentPendingCount.' Zahlungen ausstehend', route('articles.index', ['pending' => ['payment']]), $paymentPendingCount > 0],
+                    ['Noch offen', \App\Models\Article::euro($stats['openAmount']), $paymentPendingCount === 1 ? '1 Zahlung ausstehend' : $paymentPendingCount.' Zahlungen ausstehend', route('pending.index', 'zahlung'), $paymentPendingCount > 0],
                 ];
             @endphp
             <div class="grid grid-cols-2 gap-3 px-4 sm:grid-cols-3 sm:px-0 lg:grid-cols-5 lg:gap-4">
@@ -39,10 +39,10 @@
             </div>
 
             <div class="grid gap-6 lg:grid-cols-2">
-                <x-dashboard-list title="Zahlung ausstehend" accent="amber" :articles="$paymentPending" :count="$paymentPendingCount"
-                                  :href="route('articles.index', ['pending' => ['payment']])" empty="Alle Verkäufe sind bezahlt." />
-                <x-dashboard-list title="Versand ausstehend" accent="amber" :articles="$shippingPending" :count="$shippingPendingCount"
-                                  :href="route('articles.index', ['pending' => ['shipping']])" empty="Nichts zu verschicken." />
+                <x-dashboard-list title="Zahlung ausstehend" accent="amber" mark="paid" :articles="$paymentPending" :count="$paymentPendingCount"
+                                  :href="route('pending.index', 'zahlung')" empty="Alle Verkäufe sind bezahlt." />
+                <x-dashboard-list title="Versand ausstehend" accent="amber" mark="shipped" :articles="$shippingPending" :count="$shippingPendingCount"
+                                  :href="route('pending.index', 'versand')" empty="Nichts zu verschicken." />
                 <x-dashboard-list title="Zuletzt verkauft" :articles="$recentlySold" empty="Noch nichts verkauft." />
 
                 <section class="flex flex-col bg-white shadow-sm sm:rounded-lg">

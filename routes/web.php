@@ -3,6 +3,7 @@
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PendingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicCategoryController;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +30,8 @@ Route::middleware('auth')->group(function () {
     Route::post('articles/public-link', [ArticleController::class, 'regeneratePublicLink'])->name('articles.public-link');
     Route::resource('categories.articles', ArticleController::class)->shallow()->except('index');
     Route::patch('articles/{article}/sold', [ArticleController::class, 'sold'])->name('articles.sold');
+    Route::patch('articles/{article}/mark/{flag}', [PendingController::class, 'mark'])->whereIn('flag', ['paid', 'shipped'])->name('articles.mark');
+    Route::get('offen/{type}', [PendingController::class, 'index'])->whereIn('type', array_keys(PendingController::TYPES))->name('pending.index');
 });
 
 require __DIR__.'/auth.php';

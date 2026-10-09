@@ -674,4 +674,46 @@ class CategoryArticleTest extends TestCase
             ->assertSeeInOrder(['Versand ausstehend', 'Mit Rabatt', '12,50 €', 'Teurer', '11,00 €', 'VK 11,00 €, ohne Versand', '+1,00 €'])
             ->assertSeeInOrder(['Zuletzt verkauft', 'Gleich', '6,00 €', 'VK 6,00 €, ohne Versand']);
     }
+
+    public function test_dashboard_quick_marks_paid_and_shipped(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $article = $category->articles()->create(['image_path' => 'articles/a.jpg', 'title' => 'Body', 'brand' => 'Zara', 'size' => '74', 'sold' => true]);
+        $available = $category->articles()->create(['image_path' => 'articles/b.jpg', 'brand' => 'Zara', 'size' => '74']);
+
+        $this->get(route('dashboard'))
+            ->assertSee([route('articles.mark', [$article, 'paid']), route('articles.mark', [$article, 'shipped'])])
+            ->assertSee([route('pending.index', 'zahlung'), route('pending.index', 'versand')]);
+
+        $this->from(route('dashboard'))->patch(route('articles.mark', [$article, 'paid']))
+            ->assertRedirect(route('dashboard'))->assertSessionHas('status', '„Body“ als bezahlt markiert.');
+        $this->assertTrue($article->fresh()->paid);
+        $this->assertNotNull($article->fresh()->paid_at);
+        $this->assertFalse($article->fresh()->shipped);
+
+        $this->from(route('pending.index', 'versand'))->patch(route('articles.mark', [$article, 'shipped']))
+            ->assertRedirect(route('pending.index', 'versand'));
+        $this->assertTrue($article->fresh()->shipped);
+
+        $this->patch(route('articles.mark', [$available, 'paid']))->assertStatus(422);
+        $this->patch('/articles/'.$article->id.'/mark/sold')->assertNotFound();
+    }
+
+    public function test_pending_pages_list_all_open_articles_oldest_first_with_sum(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $this->travelTo(now()->setDateTime(2026, 10, 1, 12, 0));
+        foreach (range(1, 7) as $i) {
+            $category->articles()->create(['image_path' => "articles/$i.jpg", 'title' => "Offen $i", 'brand' => 'Zara', 'size' => '74', 'price' => 10, 'shipping_cost' => 1, 'sold' => true, 'paid' => $i === 7]);
+            $this->travel(1)->days();
+        }
+
+        $this->get(route('pending.index', 'zahlung'))->assertOk()
+            ->assertSeeInOrder(['Zahlung ausstehend', '6 Artikel', '66,00 €', 'Offen 1', 'Offen 2', 'Offen 6'])
+            ->assertDontSee('Offen 7')
+            ->assertSee(route('articles.mark', [Article::firstWhere('title', 'Offen 6'), 'paid']));
+        $this->get(route('pending.index', 'versand'))->assertOk()
+            ->assertSeeInOrder(['Versand ausstehend', '7 Artikel', 'Offen 1', 'unbezahlt', 'Offen 7']);
+        $this->get('/offen/irgendwas')->assertNotFound();
+    }
 }
