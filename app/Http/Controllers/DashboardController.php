@@ -13,8 +13,9 @@ class DashboardController extends Controller
 
     public function __invoke(): View
     {
-        // Ohne erfassten Verkaufspreis zählt der Angebotspreis.
-        $amount = DB::raw('sum(coalesce(sale_price, price, 0)) as total');
+        // 0 € gilt als nicht erfasst; ohne Verkaufspreis zählt der Angebotspreis.
+        $price = 'coalesce(nullif(sale_price, 0), nullif(price, 0), 0)';
+        $amount = DB::raw("sum($price) as total");
 
         return view('dashboard', [
             'stats' => [
@@ -22,7 +23,7 @@ class DashboardController extends Controller
                 'available' => Article::where('sold', false)->count(),
                 'sold' => Article::where('sold', true)->count(),
                 'revenue' => (float) Article::where('sold', true)->select($amount)->value('total'),
-                'openAmount' => (float) Article::paymentPending()->select(DB::raw('sum(coalesce(sale_price, price, 0) + coalesce(shipping_cost, 0)) as total'))->value('total'),
+                'openAmount' => (float) Article::paymentPending()->select(DB::raw("sum($price + coalesce(shipping_cost, 0)) as total"))->value('total'),
                 'discount' => $this->averageDiscount(),
                 'soldThisMonth' => Article::where('sold', true)->where('sold_at', '>=', now()->startOfMonth())->count(),
             ],
@@ -44,7 +45,7 @@ class DashboardController extends Controller
      */
     private function averageDiscount(): ?array
     {
-        $row = Article::where('sold', true)->whereNotNull('sale_price')->where('price', '>', 0)
+        $row = Article::where('sold', true)->where('sale_price', '>', 0)->where('price', '>', 0)
             ->selectRaw('count(*) as total, avg((price - sale_price) / price) as ratio, avg(price - sale_price) as amount')
             ->toBase()
             ->first();

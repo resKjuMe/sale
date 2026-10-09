@@ -637,4 +637,22 @@ class CategoryArticleTest extends TestCase
             ->assertSeeInOrder(['Noch offen', '12,50 €'])
             ->assertSeeInOrder(['Zahlung ausstehend', '12,50 €']);
     }
+
+    public function test_dashboard_ignores_zero_euro_amounts(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $category->articles()->createMany([
+            ['image_path' => 'articles/a.jpg', 'title' => 'Null verkauft', 'brand' => 'Zara', 'size' => '74', 'price' => 10, 'sale_price' => 0, 'sold' => true],
+            ['image_path' => 'articles/b.jpg', 'title' => 'Ohne Preise', 'brand' => 'Zara', 'size' => '74', 'price' => 0, 'sale_price' => 0, 'shipping_cost' => 0, 'sold' => true],
+            ['image_path' => 'articles/c.jpg', 'title' => 'Normal', 'brand' => 'Zara', 'size' => '74', 'price' => 20, 'sale_price' => 15, 'sold' => true, 'paid' => true],
+        ]);
+
+        $html = $this->get(route('dashboard'))->assertOk()
+            ->assertSeeInOrder(['Umsatz', '25,00 €'])
+            ->assertSeeInOrder(['Ø Rabatt', '25 %', 'Ø 5,00 € bei 1 Verkäufen'])
+            ->assertSeeInOrder(['Noch offen', '10,00 €'])
+            ->assertSeeInOrder(['Zahlung ausstehend', 'Null verkauft', '10,00 €', 'Ohne Preise', '–'])
+            ->getContent();
+        $this->assertDoesNotMatchRegularExpression('/(?<![\d.])0,00 €/u', $html);
+    }
 }

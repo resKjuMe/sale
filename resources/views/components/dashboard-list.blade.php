@@ -33,7 +33,8 @@
                             </div>
                         </div>
                         <div class="shrink-0 text-right">
-                            <div class="text-sm font-semibold text-gray-900" @if ($due && $article->shipping_cost !== null) title="inkl. {{ $article->formattedShippingCost() }} Versand" @endif>{{ $due ? \App\Models\Article::euro($article->amountDue()) : ($article->formattedSalePrice() ?? $article->formattedPrice() ?? '–') }}</div>
+                            @php($amount = $due ? $article->amountDue() : $article->effectiveSalePrice())
+                            <div class="text-sm font-semibold text-gray-900" @if ($due && $article->shipping_cost > 0) title="inkl. {{ $article->formattedShippingCost() }} Versand" @endif>{{ $amount > 0 ? \App\Models\Article::euro($amount) : '–' }}</div>
                             @if ($label = $article->soldSinceLabel())
                                 @php($days = (int) $article->sold_at->copy()->diffInDays(now()))
                                 <div @class(['text-xs', 'font-medium text-amber-700' => $accent === 'amber' && $days >= 7, 'text-gray-500' => ! ($accent === 'amber' && $days >= 7)])>{{ $label }}</div>

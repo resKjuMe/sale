@@ -102,10 +102,22 @@ class Article extends Model
         return self::euro($this->shipping_cost);
     }
 
-    // Was der Käufer insgesamt zahlt; ohne Verkaufspreis gilt der Angebotspreis.
+    // Verkaufspreis, sonst Angebotspreis; 0 € gilt als nicht erfasst.
+    public function effectiveSalePrice(): ?float
+    {
+        foreach ([$this->sale_price, $this->price] as $amount) {
+            if ((float) $amount > 0) {
+                return (float) $amount;
+            }
+        }
+
+        return null;
+    }
+
+    // Was der Käufer insgesamt zahlt.
     public function amountDue(): float
     {
-        return (float) ($this->sale_price ?? $this->price ?? 0) + (float) ($this->shipping_cost ?? 0);
+        return ($this->effectiveSalePrice() ?? 0) + (float) ($this->shipping_cost ?? 0);
     }
 
     public function markSold(bool $sold): void
