@@ -31,10 +31,42 @@ async function downscaleInput(input) {
     input.files = transfer.files;
 }
 
+const MAX_EXTRAS = 8;
+
 export default (initialPreview = null) => ({
     preview: initialPreview,
     processing: false,
     extras: [],
+    // Schnellerfassung: Fotos einzeln nacheinander sammeln, statt sie auf einmal zu wählen.
+    collected: [],
+
+    async collect(event) {
+        const input = event.target;
+        const files = [...input.files].slice(0, MAX_EXTRAS - this.collected.length);
+        input.value = '';
+        this.processing = true;
+        try {
+            for (const file of files) {
+                const resized = await downscale(file).catch(() => file);
+                this.collected.push({ file: resized, url: URL.createObjectURL(resized) });
+            }
+        } finally {
+            this.processing = false;
+            this.syncCollected();
+        }
+    },
+
+    removeCollected(index) {
+        URL.revokeObjectURL(this.collected[index].url);
+        this.collected.splice(index, 1);
+        this.syncCollected();
+    },
+
+    syncCollected() {
+        const transfer = new DataTransfer();
+        this.collected.forEach(({ file }) => transfer.items.add(file));
+        this.$refs.photos.files = transfer.files;
+    },
 
     async pickExtras(event) {
         const input = event.target;

@@ -47,6 +47,25 @@
                     </label>
                 </div>
 
+                <input id="photos" name="photos[]" type="file" multiple class="hidden" x-ref="photos">
+                <input id="extra-photo" type="file" accept="image/*" multiple class="sr-only" x-on:change="collect($event)">
+                <div class="flex flex-wrap items-center gap-2">
+                    <template x-for="(photo, index) in collected" :key="photo.url">
+                        <div class="relative">
+                            <img :src="photo.url" alt="" class="h-16 w-16 rounded-lg bg-gray-200 object-cover">
+                            <button type="button" x-on:click="removeCollected(index)" aria-label="Foto entfernen"
+                                    class="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-800 text-xs font-bold text-white shadow">✕</button>
+                        </div>
+                    </template>
+                    <label for="extra-photo" x-show="collected.length < {{ \App\Models\Article::MAX_EXTRA_IMAGES }}"
+                           class="flex h-16 cursor-pointer items-center gap-1.5 rounded-lg border-2 border-dashed border-gray-300 px-3 text-sm font-medium text-gray-600 active:bg-gray-50">
+                        <span class="text-lg leading-none">+</span> Foto
+                    </label>
+                    <span x-show="! collected.length" class="text-xs text-gray-500">z. B. Etikett oder Details</span>
+                </div>
+                <x-input-error :messages="$errors->get('photos')" class="mt-1" />
+                <x-input-error :messages="$errors->get('photos.*')" class="mt-1" />
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <x-input-label for="brand" value="Marke" />

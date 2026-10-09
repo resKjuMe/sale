@@ -1018,4 +1018,20 @@ class CategoryArticleTest extends TestCase
 
         $this->get(route('dashboard'))->assertSee(route('articles.index', ['sold' => 1]));
     }
+
+    public function test_quick_capture_accepts_extra_photos(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+
+        $this->get(route('categories.articles.quick', $category))->assertSee(['name="photos[]"', 'collect($event)'], false);
+        $this->post(route('categories.articles.store', $category), [
+            'quick' => '1',
+            'image' => UploadedFile::fake()->image('main.jpg'),
+            'photos' => [UploadedFile::fake()->image('label.jpg'), UploadedFile::fake()->image('back.jpg')],
+            'brand' => 'Zara',
+            'size' => '74',
+        ])->assertRedirect(route('categories.articles.quick', $category));
+
+        $this->assertCount(2, Article::sole()->images);
+    }
 }
