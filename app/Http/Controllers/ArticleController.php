@@ -29,7 +29,7 @@ class ArticleController extends Controller
 
     public function store(ArticleRequest $request, Category $category): RedirectResponse|JsonResponse
     {
-        $data = $request->safe()->except('image');
+        $data = $request->articleData();
         $data['image_path'] = $request->file('image')->store('articles', 'public');
 
         $article = $category->articles()->create($data);
@@ -58,7 +58,7 @@ class ArticleController extends Controller
 
     public function update(ArticleRequest $request, Article $article): RedirectResponse
     {
-        $data = $request->safe()->except('image');
+        $data = $request->articleData();
         $oldPath = null;
 
         if ($request->hasFile('image')) {

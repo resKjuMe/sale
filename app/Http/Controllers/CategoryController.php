@@ -12,7 +12,9 @@ class CategoryController extends Controller
 {
     public function index(): View
     {
-        $categories = Category::withCount('articles')->orderBy('name')->get();
+        $categories = Category::withCount(['articles', 'articles as sold_count' => fn ($query) => $query->where('sold', true)])
+            ->orderBy('name')
+            ->get();
 
         return view('categories.index', compact('categories'));
     }

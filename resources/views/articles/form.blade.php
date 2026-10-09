@@ -74,6 +74,38 @@
                         </div>
                     </div>
 
+                    @if ($article->exists)
+                        <div class="space-y-4 border-t border-gray-200 pt-6"
+                             x-data="{ sold: @js((bool) old('sold', $article->sold)), paid: @js((bool) old('paid', $article->paid)) }">
+                            <x-toggle name="sold" label="Verkauft" model="sold" />
+
+                            <div x-show="sold" x-cloak class="grid gap-4 rounded-md bg-gray-50 p-4 sm:grid-cols-2">
+                                <div class="sm:col-span-2">
+                                    <x-input-label for="buyer_name" value="An wen" />
+                                    <x-text-input id="buyer_name" name="buyer_name" type="text" class="mt-1 block w-full"
+                                                  :value="old('buyer_name', $article->buyer_name)" />
+                                    <x-input-error :messages="$errors->get('buyer_name')" class="mt-2" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <x-input-label for="buyer_address" value="Adresse" />
+                                    <textarea id="buyer_address" name="buyer_address" rows="3"
+                                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('buyer_address', $article->buyer_address) }}</textarea>
+                                    <x-input-error :messages="$errors->get('buyer_address')" class="mt-2" />
+                                </div>
+                                <div>
+                                    <x-input-label for="sale_price" value="Verkaufspreis in €" />
+                                    <x-text-input id="sale_price" name="sale_price" type="text" inputmode="decimal" class="mt-1 block w-full"
+                                                  :value="old('sale_price', $article->sale_price !== null ? str_replace('.', ',', $article->sale_price) : null)"
+                                                  placeholder="0,00" />
+                                    <x-input-error :messages="$errors->get('sale_price')" class="mt-2" />
+                                </div>
+                                <div class="flex items-end pb-2">
+                                    <x-toggle name="paid" label="Bezahlt" model="paid" />
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="flex items-center gap-4">
                         <x-primary-button x-bind:disabled="processing">Speichern</x-primary-button>
                         <a href="{{ $article->exists ? route('articles.show', $article) : route('categories.show', $category) }}"

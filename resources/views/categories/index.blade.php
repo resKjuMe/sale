@@ -25,6 +25,9 @@
                                 <h3 class="text-lg font-medium text-gray-900">{{ $category->name }}</h3>
                                 <span class="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-700">
                                     {{ $category->articles_count }} Artikel
+                                    @if ($category->sold_count)
+                                        · {{ $category->sold_count }} verkauft
+                                    @endif
                                 </span>
                             </div>
                             @if ($category->description)

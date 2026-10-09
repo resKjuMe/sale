@@ -40,6 +40,18 @@
                     <dd class="text-gray-900 font-semibold">{{ $article->formattedPrice() ?? '–' }}</dd>
                     <dt class="text-gray-500">Angelegt</dt>
                     <dd class="text-gray-900">{{ $article->created_at->format('d.m.Y H:i') }}</dd>
+
+                    <dt class="col-span-2 mt-3 border-t border-gray-200 pt-3 font-medium text-gray-900">Verkauf</dt>
+                    <dt class="text-gray-500">Status</dt>
+                    <dd><x-sale-badge :article="$article" /></dd>
+                    @if ($article->sold)
+                        <dt class="text-gray-500">An wen</dt>
+                        <dd class="text-gray-900">{{ $article->buyer_name ?? '–' }}</dd>
+                        <dt class="text-gray-500">Adresse</dt>
+                        <dd class="whitespace-pre-line text-gray-900">{{ $article->buyer_address ?? '–' }}</dd>
+                        <dt class="text-gray-500">Verkaufspreis</dt>
+                        <dd class="font-semibold text-gray-900">{{ $article->formattedSalePrice() ?? '–' }}</dd>
+                    @endif
                 </dl>
             </div>
         </div>

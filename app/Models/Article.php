@@ -9,13 +9,24 @@ use Illuminate\Support\Facades\Storage;
 
 class Article extends Model
 {
-    protected $fillable = ['image_path', 'title', 'brand', 'size', 'condition', 'price'];
+    protected $fillable = [
+        'image_path', 'title', 'brand', 'size', 'condition', 'price',
+        'sold', 'buyer_name', 'buyer_address', 'paid', 'sale_price',
+    ];
+
+    protected $attributes = [
+        'sold' => false,
+        'paid' => false,
+    ];
 
     protected function casts(): array
     {
         return [
             'condition' => ArticleCondition::class,
             'price' => 'decimal:2',
+            'sold' => 'boolean',
+            'paid' => 'boolean',
+            'sale_price' => 'decimal:2',
         ];
     }
 
@@ -41,6 +52,16 @@ class Article extends Model
 
     public function formattedPrice(): ?string
     {
-        return $this->price === null ? null : number_format((float) $this->price, 2, ',', '.').' €';
+        return self::euro($this->price);
+    }
+
+    public function formattedSalePrice(): ?string
+    {
+        return self::euro($this->sale_price);
+    }
+
+    private static function euro(?string $amount): ?string
+    {
+        return $amount === null ? null : number_format((float) $amount, 2, ',', '.').' €';
     }
 }

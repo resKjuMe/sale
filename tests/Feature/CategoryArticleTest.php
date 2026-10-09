@@ -164,6 +164,52 @@ class CategoryArticleTest extends TestCase
         $this->assertSame(1, $category->articles()->count());
     }
 
+    public function test_article_can_be_marked_as_sold_and_is_marked_in_lists(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+        $article = $category->articles()->create(['image_path' => 'articles/x.jpg', 'brand' => 'Nike', 'size' => '42']);
+        $this->assertFalse($article->fresh()->sold);
+
+        $this->put(route('articles.update', $article), [
+            'brand' => 'Nike',
+            'size' => '42',
+            'sold' => '1',
+            'buyer_name' => 'Erika Muster',
+            'buyer_address' => "Hauptstr. 1\n12345 Musterstadt",
+            'paid' => '0',
+            'sale_price' => '35,50',
+        ])->assertSessionHasNoErrors();
+
+        $article->refresh();
+        $this->assertTrue($article->sold);
+        $this->assertFalse($article->paid);
+        $this->assertSame('35.50', $article->sale_price);
+        $this->assertSame('Erika Muster', $article->buyer_name);
+
+        $this->get(route('categories.show', $category))->assertSee(['Verkauft', 'Offen', 'an Erika Muster', '35,50 €']);
+        $this->get(route('categories.index'))->assertSee('1 verkauft');
+        $this->get(route('articles.show', $article))->assertSee(['Erika Muster', 'Musterstadt', '35,50 €']);
+    }
+
+    public function test_unmarking_sold_clears_sale_data(): void
+    {
+        $category = Category::create(['name' => 'Schuhe']);
+        $article = $category->articles()->create([
+            'image_path' => 'articles/x.jpg', 'brand' => 'Nike', 'size' => '42',
+            'sold' => true, 'buyer_name' => 'Erika', 'paid' => true, 'sale_price' => 10,
+        ]);
+
+        $this->put(route('articles.update', $article), ['brand' => 'Nike', 'size' => '42', 'sold' => '0', 'paid' => '1', 'buyer_name' => 'Erika'])
+            ->assertSessionHasNoErrors();
+
+        $article->refresh();
+        $this->assertFalse($article->sold);
+        $this->assertFalse($article->paid);
+        $this->assertNull($article->buyer_name);
+        $this->assertNull($article->sale_price);
+        $this->get(route('categories.show', $category))->assertDontSee('Verkauft');
+    }
+
     public function test_image_brand_and_size_are_required(): void
     {
         $category = Category::create(['name' => 'Schuhe']);

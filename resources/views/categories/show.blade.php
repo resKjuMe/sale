@@ -52,15 +52,29 @@
                 <div class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
                     @foreach ($articles as $article)
                         <a href="{{ route('articles.show', $article) }}"
-                           class="block bg-white shadow-sm sm:rounded-lg overflow-hidden hover:shadow-md transition">
-                            <img src="{{ $article->imageUrl() }}" alt="{{ $article->displayTitle() }}"
-                                 class="aspect-square w-full object-cover bg-gray-100" loading="lazy">
+                           @class([
+                               'block bg-white shadow-sm sm:rounded-lg overflow-hidden hover:shadow-md transition',
+                               'ring-2 ring-gray-800' => $article->sold,
+                           ])>
+                            <div class="relative">
+                                <img src="{{ $article->imageUrl() }}" alt="{{ $article->displayTitle() }}"
+                                     @class(['aspect-square w-full object-cover bg-gray-100', 'opacity-50 grayscale' => $article->sold])
+                                     loading="lazy">
+                                @if ($article->sold)
+                                    <x-sale-badge :article="$article" class="absolute left-2 top-2" />
+                                @endif
+                            </div>
                             <div class="p-3">
                                 <div class="font-medium text-gray-900 truncate">{{ $article->displayTitle() }}</div>
                                 <div class="text-sm text-gray-600 truncate">{{ $article->brand }} · Gr. {{ $article->size }}</div>
-                                <div class="mt-1 flex items-center justify-between text-sm">
-                                    <span class="text-gray-500">{{ $article->condition?->label() }}</span>
-                                    <span class="font-semibold text-gray-900">{{ $article->formattedPrice() }}</span>
+                                <div class="mt-1 flex items-center justify-between gap-2 text-sm">
+                                    @if ($article->sold)
+                                        <span class="truncate text-gray-500">{{ $article->buyer_name ? 'an '.$article->buyer_name : 'verkauft' }}</span>
+                                        <span class="shrink-0 font-semibold text-gray-900">{{ $article->formattedSalePrice() }}</span>
+                                    @else
+                                        <span class="truncate text-gray-500">{{ $article->condition?->label() }}</span>
+                                        <span class="shrink-0 font-semibold text-gray-900">{{ $article->formattedPrice() }}</span>
+                                    @endif
                                 </div>
                             </div>
                         </a>
