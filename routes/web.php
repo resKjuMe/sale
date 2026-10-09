@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('categories.articles', ArticleController::class)->shallow()->except('index');
     Route::patch('articles/{article}/sold', [ArticleController::class, 'sold'])->name('articles.sold');
     Route::patch('articles/{article}/mark/{flag}', [PendingController::class, 'mark'])->whereIn('flag', ['paid', 'shipped', 'picked_up'])->name('articles.mark');
+    Route::patch('articles/{article}/unmark/{flag}', [PendingController::class, 'unmark'])->whereIn('flag', ['paid', 'shipped', 'picked_up'])->name('articles.unmark');
     Route::get('offen/{type}', [PendingController::class, 'index'])->whereIn('type', array_keys(PendingController::TYPES))->name('pending.index');
 });
 

@@ -69,6 +69,13 @@ class Article extends Model
         static::deleted(fn (Article $article) => Storage::disk('public')->delete($article->image_path));
     }
 
+    // Weder Verkaufs- noch Angebotspreis über 0 €.
+    public function scopeWithoutPrice(Builder $query): void
+    {
+        $query->where(fn (Builder $query) => $query->whereNull('sale_price')->orWhere('sale_price', '<=', 0))
+            ->where(fn (Builder $query) => $query->whereNull('price')->orWhere('price', '<=', 0));
+    }
+
     public function scopePaymentPending(Builder $query): void
     {
         $query->where('sold', true)->where('paid', false);

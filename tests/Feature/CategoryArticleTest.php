@@ -649,7 +649,7 @@ class CategoryArticleTest extends TestCase
 
         $html = $this->get(route('dashboard'))->assertOk()
             ->assertSeeInOrder(['Umsatz', '25,00 €'])
-            ->assertSeeInOrder(['Ø Rabatt', '25 %', 'Ø 5,00 € bei 1 Verkäufen'])
+            ->assertSeeInOrder(['Ø Rabatt', '25 %', 'Ø 5,00 € bei 1 Verkauf'])
             ->assertSeeInOrder(['Noch offen', '10,00 €'])
             ->assertSeeInOrder(['Zahlung ausstehend', 'Null verkauft', '10,00 €', 'Ohne Preise', '–'])
             ->getContent();
@@ -754,5 +754,47 @@ class CategoryArticleTest extends TestCase
         $this->assertFalse($article->picked_up);
         $this->assertNull($article->picked_up_at);
         $this->assertSame(1, Article::shippingPending()->count());
+    }
+
+    public function test_dashboard_tiles_name_sales_missing_from_the_sums(): void
+    {
+        $category = Category::create(['name' => 'Bodys']);
+        $category->articles()->createMany([
+            ['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74', 'price' => 10, 'sale_price' => 8, 'shipping_cost' => 4, 'sold' => true, 'paid' => true],
+            ['image_path' => 'articles/b.jpg', 'brand' => 'Zara', 'size' => '74', 'price' => 10, 'sold' => true],
+            ['image_path' => 'articles/c.jpg', 'brand' => 'Zara', 'size' => '74', 'sold' => true],
+            ['image_path' => 'articles/d.jpg', 'brand' => 'Zara', 'size' => '74', 'sale_price' => 0, 'sold' => true, 'pickup' => true],
+        ]);
+
+        $this->get(route('dashboard'))->assertOk()
+            ->assertSeeInOrder(['Umsatz', '18,00 €', '2 Verkäufe ohne Preis – nicht mitgezählt'])
+            ->assertSeeInOrder(['Ø Rabatt', '3 Verkäufe ohne beide Preise – nicht mitgezählt'])
+            ->assertSeeInOrder(['Noch offen', '10,00 €', '2 ohne Preis · 2 ohne Versandkosten – nicht mitgezählt']);
+
+        Article::query()->delete();
+        $this->get(route('dashboard'))->assertDontSee('nicht mitgezählt');
+    }
+
+    public function test_quick_mark_can_be_undone_for_a_short_time(): void
+    {
+        $this->travelTo(now()->setDateTime(2026, 10, 9, 12, 0));
+        $article = Category::create(['name' => 'Bodys'])->articles()->create(['image_path' => 'articles/a.jpg', 'title' => 'Body', 'brand' => 'Zara', 'size' => '74', 'sold' => true]);
+
+        $this->from(route('dashboard'))->patch(route('articles.mark', [$article, 'paid']))
+            ->assertSessionHas('undo', ['url' => route('articles.unmark', [$article, 'paid']), 'expires' => now()->addSeconds(30)->getTimestamp()]);
+        $this->get(route('dashboard'))->assertSee(['„Body“ als bezahlt markiert.', 'Rückgängig', '(30 s)', route('articles.unmark', [$article, 'paid'])]);
+        $this->get(route('dashboard'))->assertDontSee('Rückgängig');
+
+        $this->travel(20)->seconds();
+        $this->from(route('dashboard'))->patch(route('articles.unmark', [$article, 'paid']))
+            ->assertSessionHas('status', 'Rückgängig: „Body“ ist wieder nicht bezahlt.');
+        $this->assertFalse($article->fresh()->paid);
+        $this->assertNull($article->fresh()->paid_at);
+
+        $this->patch(route('articles.mark', [$article, 'shipped']));
+        $this->travel(40)->seconds();
+        $this->from(route('dashboard'))->patch(route('articles.unmark', [$article, 'shipped']))
+            ->assertSessionHas('status', 'Rückgängig ist nur kurz nach dem Markieren möglich – bitte im Artikel ändern.');
+        $this->assertTrue($article->fresh()->shipped);
     }
 }
