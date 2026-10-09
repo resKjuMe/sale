@@ -25,7 +25,11 @@ class ArticleAssistant
         Antworte nur mit dem verlangten JSON. Was du auf den Fotos nicht sicher erkennst, setzt du auf null – rate nicht.
         TXT;
 
-    public function __construct(private readonly ?string $apiKey, private readonly string $model) {}
+    public function __construct(
+        private readonly ?string $apiKey,
+        private readonly string $model,
+        private readonly ?string $workspaceId = null,
+    ) {}
 
     public function configured(): bool
     {
@@ -59,6 +63,7 @@ class ArticleAssistant
                 // Lehnt das Modell aus Richtlinien-Gründen ab, versucht die API es serverseitig mit dem Standard-Ersatzmodell.
                 fallbacks: 'default',
                 betas: ['server-side-fallback-2026-07-01'],
+                workspaceID: $this->workspaceId ?: null,
             );
         } catch (APIException $e) {
             throw new RuntimeException('Die KI ist gerade nicht erreichbar. Bitte später erneut versuchen.', previous: $e);

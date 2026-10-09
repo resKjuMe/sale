@@ -31,6 +31,8 @@ return [
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),
         'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),
+        // Nur für Keys, die an keinen Workspace gebunden sind.
+        'workspace' => env('ANTHROPIC_WORKSPACE_ID'),
     ],
 
     'slack' => [
