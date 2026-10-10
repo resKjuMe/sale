@@ -10,14 +10,14 @@
 </head>
 <body class="bg-gray-100 font-sans text-gray-900 antialiased">
     <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <x-application-logo class="mx-auto mb-6 block h-auto max-h-24 w-full max-w-md object-contain" />
+        <img src="{{ asset('images/logo-stacked.png') }}" alt="{{ config('app.name') }}" class="mx-auto mb-6 block h-auto w-full max-w-xs sm:max-w-sm">
 
         <header class="mb-6">
             <h1 class="text-center text-2xl font-semibold">{{ $title }}</h1>
             @if ($description)
                 <p class="mt-2 whitespace-pre-line text-gray-600">{{ $description }}</p>
             @endif
-            <p class="mt-2 text-sm text-gray-500" data-live-target="counts">
+            <p class="mt-2 text-center text-sm text-gray-500" data-live-target="counts">
                 {{ $articles->where('sold', false)->count() }} verfügbar
                 @if ($articles->where('sold', true)->isNotEmpty())
                     · {{ $articles->where('sold', true)->count() }} verkauft
