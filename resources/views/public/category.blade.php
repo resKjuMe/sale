@@ -10,10 +10,10 @@
 </head>
 <body class="bg-gray-100 font-sans text-gray-900 antialiased">
     <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <x-application-logo class="mb-6 h-auto max-h-24 w-full max-w-md" />
+        <x-application-logo class="mx-auto mb-6 block h-auto max-h-24 w-full max-w-md object-contain" />
 
         <header class="mb-6">
-            <h1 class="text-2xl font-semibold">{{ $title }}</h1>
+            <h1 class="text-center text-2xl font-semibold">{{ $title }}</h1>
             @if ($description)
                 <p class="mt-2 whitespace-pre-line text-gray-600">{{ $description }}</p>
             @endif
