@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>{{ ($overview ?? false) ? $title : $title.' · '.config('app.name') }}</title>
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     @vite(['resources/css/app.css', 'resources/js/live-filter.js'])
 </head>
 <body class="bg-gray-100 font-sans text-gray-900 antialiased">
     <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <x-application-logo class="mb-6 h-auto max-h-24 w-full max-w-md" />
+
         <header class="mb-6">
             <h1 class="text-2xl font-semibold">{{ $title }}</h1>
             @if ($description)
