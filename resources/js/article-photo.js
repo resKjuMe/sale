@@ -33,17 +33,30 @@ async function downscaleInput(input) {
 
 const MAX_EXTRAS = 8;
 
+function imageFiles(dataTransfer) {
+    return [...(dataTransfer?.files ?? [])].filter((file) => file.type.startsWith('image/'));
+}
+
 export default (initialPreview = null) => ({
     preview: initialPreview,
     processing: false,
+    dragging: false,
     extras: [],
     // Schnellerfassung: Fotos einzeln nacheinander sammeln, statt sie auf einmal zu wählen.
     collected: [],
 
     async collect(event) {
         const input = event.target;
-        const files = [...input.files].slice(0, MAX_EXTRAS - this.collected.length);
+        const files = [...input.files];
         input.value = '';
+        await this.addCollected(files);
+    },
+
+    async addCollected(selected) {
+        const files = selected.slice(0, MAX_EXTRAS - this.collected.length);
+        if (!files.length) {
+            return;
+        }
         this.processing = true;
         try {
             for (const file of files) {
@@ -81,10 +94,55 @@ export default (initialPreview = null) => ({
     },
 
     async pick(event) {
-        const input = event.target;
-        const file = input.files[0];
+        await this.setMain(event.target, event.target.files[0]);
+    },
+
+    // Schnellerfassung: Strg+V setzt das Hauptfoto bzw. danach weitere Fotos.
+    async paste(event) {
+        const files = imageFiles(event.clipboardData);
+        if (!files.length || this.processing) {
+            return;
+        }
+        event.preventDefault();
+        if (this.preview) {
+            await this.addCollected(files);
+            return;
+        }
+        await this.setMain(this.$refs.camera, files[0]);
+        this.$nextTick(() => this.$refs.brand?.focus());
+    },
+
+    dragOver(event) {
+        if (!event.dataTransfer?.types.includes('Files')) {
+            return;
+        }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        this.dragging = true;
+    },
+
+    async drop(event) {
+        if (!event.dataTransfer?.types.includes('Files')) {
+            return;
+        }
+        event.preventDefault();
+        this.dragging = false;
+        const [file] = imageFiles(event.dataTransfer);
+        if (!file || this.processing) {
+            return;
+        }
+        await this.setMain(this.$refs.camera, file);
+        this.$nextTick(() => this.$refs.brand?.focus());
+    },
+
+    async setMain(input, file) {
         if (!file) {
             return;
+        }
+        if (input.files[0] !== file) {
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            input.files = transfer.files;
         }
 
         this.processing = true;
