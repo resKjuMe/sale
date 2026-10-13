@@ -9,6 +9,8 @@
             details: @js($articles->mapWithKeys(fn ($a) => [$a->id => $a->hasSaleDetails()])),
             ids: @js($articles->pluck('id')),
             batchUrl: @js(route('articles.batch.edit')),
+            printUrl: @js(route('articles.print')),
+            collageUrl: @js(route('articles.collage')),
          })"
          class="pb-24">
         <div class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -99,10 +101,18 @@
                         <span class="text-sm font-medium text-gray-700" x-text="selectedIds.length === 1 ? '1 ausgewählt' : `${selectedIds.length} ausgewählt`"></span>
                         <button type="button" x-on:click="toggleAll()" class="text-sm text-gray-500 underline hover:text-gray-800"
                                 x-text="allSelected ? 'Keine auf dieser Seite' : 'Alle auf dieser Seite'"></button>
-                        <div class="ms-auto flex gap-2">
+                        <div class="ms-auto flex flex-wrap justify-end gap-2">
                             <button type="button" x-on:click="setSelecting(false)"
                                     class="rounded-md border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700 active:bg-gray-50">
                                 Abbrechen
+                            </button>
+                            <button type="button" x-on:click="openPrint()" :disabled="selectedIds.length === 0"
+                                    class="rounded-md border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700 active:bg-gray-50 disabled:opacity-40">
+                                Drucken
+                            </button>
+                            <button type="button" x-on:click="openCollage()" :disabled="selectedIds.length === 0"
+                                    class="rounded-md border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700 active:bg-gray-50 disabled:opacity-40">
+                                Collage
                             </button>
                             <button type="button" x-on:click="openBatch()" :disabled="selectedIds.length === 0"
                                     class="rounded-md bg-violet-600 px-5 py-3 text-base font-semibold text-white active:bg-violet-700 disabled:opacity-40">

@@ -6,6 +6,7 @@ use App\Http\Requests\ArticleRequest;
 use App\Models\Article;
 use App\Models\Category;
 use App\Support\ArticleFilter;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,8 +23,31 @@ class ArticleController extends Controller
         return view('articles.index', ['articles' => $articles, 'filter' => $filter, 'total' => Article::count()]);
     }
 
+    public function print(Request $request): View
+    {
+        $articles = $this->selection($request);
+
+        return view('categories.print', [
+            'title' => 'Auswahl',
+            'back' => $this->back($request),
+            'articles' => $articles,
+            'columns' => min(4, max(2, $request->integer('cols', 3))),
+            'columnsUrl' => fn (int $cols) => route('articles.print', ['ids' => $articles->modelKeys(), 'back' => $this->back($request), 'cols' => $cols]),
+        ]);
+    }
+
     public function collage(Request $request): View
     {
+        if ($request->has('ids')) {
+            return view('categories.collage', [
+                'articles' => $this->selection($request)->map->toCollageArray(),
+                'filter' => null,
+                'title' => config('app.name'),
+                'back' => [$this->back($request), 'Zurück'],
+                'withCategories' => true,
+            ]);
+        }
+
         // Verkaufte steuert die Collage-Seite selbst über „Verkaufte einbeziehen".
         $filter = ArticleFilter::fromRequest($request->merge(['hide_sold' => null]));
 
@@ -146,5 +170,23 @@ class ArticleController extends Controller
             'brands' => Article::query()->distinct()->orderBy('brand')->pluck('brand'),
             'sizes' => $category->articles()->distinct()->orderBy('size')->pluck('size'),
         ];
+    }
+
+    private function selection(Request $request): Collection
+    {
+        $ids = $request->validate([
+            'ids' => ['required', 'array', 'max:200'],
+            'ids.*' => ['integer'],
+        ], ['ids.required' => 'Bitte mindestens einen Artikel auswählen.'])['ids'];
+
+        return Article::with('category')->whereIn('id', $ids)->oldest()->get();
+    }
+
+    private function back(Request $request): string
+    {
+        $back = $request->string('back')->toString();
+
+        // Nur eigene Seiten, sonst landet ein fremder oder javascript:-Link im href.
+        return str_starts_with($back, url('/').'/') ? $back : route('articles.index');
     }
 }

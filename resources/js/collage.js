@@ -215,11 +215,13 @@ function rememberSettings(settings) {
     }
 }
 
-export default ({ articles, title, slug }) => ({
+export default ({ articles, title, slug, selection = false }) => ({
     articles,
     title,
     grids: GRIDS,
     ...recallSettings(),
+    // Ausdrücklich ausgewählte Artikel kommen auch verkauft mit.
+    ...(selection ? { includeSold: true } : {}),
     pages: [],
     busy: false,
     error: '',

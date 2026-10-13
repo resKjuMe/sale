@@ -45,9 +45,11 @@ class CategoryController extends Controller
     public function print(Request $request, Category $category): View
     {
         return view('categories.print', [
-            'category' => $category,
+            'title' => $category->name,
+            'back' => route('categories.show', $category),
             'articles' => $category->articles()->oldest()->get(),
             'columns' => min(4, max(2, $request->integer('cols', 3))),
+            'columnsUrl' => fn (int $cols) => route('categories.print', [$category, 'cols' => $cols]),
         ]);
     }
 

@@ -6,14 +6,16 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <x-article-filter :filter="$filter" :articles="$source" :with-categories="$withCategories" :with-sold-toggle="false" class="mb-6 sm:rounded-lg" />
+            @if ($filter)
+                <x-article-filter :filter="$filter" :articles="$source" :with-categories="$withCategories" :with-sold-toggle="false" class="mb-6 sm:rounded-lg" />
+            @endif
 
             <div data-live-target="results"
-                 x-data="collage({ articles: @js($articles), title: @js($title), slug: @js(Str::slug($title) ?: 'collage') })">
+                 x-data="collage({ articles: @js($articles), title: @js($title), slug: @js(Str::slug($title) ?: 'collage'), selection: @js($filter === null) })">
 
             @if ($articles->isEmpty())
                 <div class="bg-white shadow-sm sm:rounded-lg p-6 text-gray-600">
-                    {{ $filter->isActive() ? 'Keine Artikel passen zum Filter.' : 'Hier gibt es noch keine Artikel.' }}
+                    {{ $filter?->isActive() ? 'Keine Artikel passen zum Filter.' : 'Hier gibt es noch keine Artikel.' }}
                 </div>
             @else
                 <div class="mb-6 space-y-4 bg-white p-4 shadow-sm sm:rounded-lg">

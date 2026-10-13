@@ -11,6 +11,7 @@ use App\Services\ArticleAssistant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Js;
 use Tests\TestCase;
 
 class CategoryArticleTest extends TestCase
@@ -1090,5 +1091,30 @@ class CategoryArticleTest extends TestCase
         $this->assertSame(['H&M'], $filtered->viewData('articles')->pluck('brand')->all());
 
         $this->get(route('categories.collage', $bodys))->assertOk()->assertSee('Überschrift „Bodys“', false);
+    }
+
+    public function test_print_and_collage_of_selected_articles(): void
+    {
+        $bodys = Category::create(['name' => 'Bodys']);
+        $hosen = Category::create(['name' => 'Hosen']);
+        $zara = $bodys->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74']);
+        $bodys->articles()->create(['image_path' => 'articles/b.jpg', 'brand' => 'Nicht gewaehlt', 'size' => '74']);
+        $hm = $hosen->articles()->create(['image_path' => 'articles/c.jpg', 'brand' => 'H&M', 'size' => '80', 'sold' => true]);
+        $query = ['ids' => [$hm->id, $zara->id], 'back' => route('categories.show', $bodys)];
+
+        $this->get(route('articles.index'))->assertSee([(string) Js::from(route('articles.print')), (string) Js::from(route('articles.collage'))], false);
+
+        $print = $this->get(route('articles.print', $query + ['cols' => 2]))->assertOk()
+            ->assertSee(['Auswahl', '2 Artikel', route('categories.show', $bodys)])
+            ->assertDontSee('Nicht gewaehlt');
+        $this->assertSame([$zara->id, $hm->id], $print->viewData('articles')->modelKeys());
+        $this->assertSame(2, $print->viewData('columns'));
+
+        $collage = $this->get(route('articles.collage', $query))->assertOk()->assertDontSee('Nicht gewaehlt');
+        $this->assertSame(['Zara', 'H&M'], $collage->viewData('articles')->pluck('brand')->all());
+        $this->assertNull($collage->viewData('filter'));
+
+        $this->get(route('articles.print', ['ids' => [$zara->id], 'back' => 'javascript:alert(1)']))->assertOk()->assertDontSee('javascript:alert(1)', false);
+        $this->get(route('articles.print'))->assertSessionHasErrors('ids');
     }
 }

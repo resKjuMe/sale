@@ -35,7 +35,7 @@ function recallSelection() {
     }
 }
 
-export default ({ sold, details, ids = [], batchUrl = null }) => ({
+export default ({ sold, details, ids = [], batchUrl = null, printUrl = null, collageUrl = null }) => ({
     active: recall(),
     sold,
     details,
@@ -44,6 +44,8 @@ export default ({ sold, details, ids = [], batchUrl = null }) => ({
     message: '',
     ids,
     batchUrl,
+    printUrl,
+    collageUrl,
     ...recallSelection(),
 
     get selectedIds() {
@@ -92,12 +94,26 @@ export default ({ sold, details, ids = [], batchUrl = null }) => ({
         rememberSelection(this.selecting, this.selected);
     },
 
-    openBatch() {
+    selectionQuery() {
         const params = new URLSearchParams();
         this.selectedIds.forEach((id) => params.append('ids[]', id));
         params.append('back', window.location.href);
+        return params;
+    },
+
+    openBatch() {
+        const params = this.selectionQuery();
         this.setSelecting(false);
         window.location.href = `${this.batchUrl}?${params}`;
+    },
+
+    // Druckansicht und Collage ändern nichts, die Auswahl bleibt für den Rückweg stehen.
+    openPrint() {
+        window.open(`${this.printUrl}?${this.selectionQuery()}`, '_blank');
+    },
+
+    openCollage() {
+        window.location.href = `${this.collageUrl}?${this.selectionQuery()}`;
     },
 
     async tap(event, id, url) {

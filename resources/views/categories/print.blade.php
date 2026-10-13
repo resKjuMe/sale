@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $category->name }} – Druckansicht · {{ config('app.name') }}</title>
+    <title>{{ $title }} – Druckansicht · {{ config('app.name') }}</title>
     @vite(['resources/css/app.css'])
     <style>
         @page {
@@ -32,11 +32,11 @@
 <body class="bg-gray-100 font-sans text-gray-900 antialiased">
     <div class="print:hidden sticky top-0 z-10 border-b border-gray-200 bg-white">
         <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <a href="{{ route('categories.show', $category) }}" class="text-sm text-gray-600 hover:text-gray-900">&larr; Zurück</a>
+            <a href="{{ $back }}" class="text-sm text-gray-600 hover:text-gray-900">&larr; Zurück</a>
             <div class="flex items-center gap-3">
                 <span class="text-sm text-gray-500">Spalten:</span>
                 @foreach ([2, 3, 4] as $cols)
-                    <a href="{{ route('categories.print', [$category, 'cols' => $cols]) }}"
+                    <a href="{{ $columnsUrl($cols) }}"
                        @class([
                            'rounded-md px-3 py-1 text-sm',
                            'bg-gray-800 text-white' => $cols === $columns,
@@ -53,12 +53,12 @@
 
     <main class="mx-auto max-w-5xl bg-white p-8 shadow print:max-w-none print:p-0 print:shadow-none sm:my-6">
         <header class="mb-6 flex items-baseline justify-between border-b border-gray-300 pb-2">
-            <h1 class="text-2xl font-semibold">{{ $category->name }}</h1>
+            <h1 class="text-2xl font-semibold">{{ $title }}</h1>
             <span class="text-sm text-gray-500">{{ $articles->count() }} Artikel · {{ now()->format('d.m.Y') }}</span>
         </header>
 
         @if ($articles->isEmpty())
-            <p class="text-gray-600">In dieser Kategorie gibt es keine Artikel.</p>
+            <p class="text-gray-600">Keine Artikel vorhanden.</p>
         @else
             <div class="print-grid">
                 @foreach ($articles as $article)
