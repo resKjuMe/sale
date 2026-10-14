@@ -23,7 +23,7 @@ class PendingFillTest extends TestCase
 
     private function sold(array $extra = []): Article
     {
-        return $this->category->articles()->create(['image_path' => 'articles/x.jpg', 'title' => 'Body', 'brand' => 'Zara', 'size' => '74', 'sold' => true] + $extra);
+        return $this->category->articles()->create($extra + ['image_path' => 'articles/x.jpg', 'title' => 'Body', 'brand' => 'Zara', 'size' => '74', 'sold' => true]);
     }
 
     public function test_list_shows_inline_price_fields_with_existing_amounts(): void
