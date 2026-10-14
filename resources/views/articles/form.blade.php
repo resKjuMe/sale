@@ -108,10 +108,13 @@
 
                         @if ($article->price_suggestion !== null)
                             {{-- Ohne name: wird nie mitgesendet, nur die KI setzt den Wert. --}}
-                            <div>
+                            <div @class(['group/tip relative' => $article->price_reason])>
                                 <x-input-label for="price_suggestion" value="Preisvorschlag (KI, Vinted)" />
                                 <x-text-input id="price_suggestion" type="text" class="mt-1 block w-full bg-gray-50 text-gray-600"
-                                              :value="$article->formattedPriceSuggestion()" :title="$article->price_reason" readonly tabindex="-1" />
+                                              :value="$article->formattedPriceSuggestion()" readonly tabindex="-1" />
+                                @if ($article->price_reason)
+                                    <x-tooltip class="left-0 top-full mt-1 w-max max-w-xs">{{ $article->price_reason }}</x-tooltip>
+                                @endif
                             </div>
                         @endif
 

@@ -1,0 +1,2 @@
+{{-- Erscheint beim Überfahren des nächsten Vorfahren mit „group/tip“; Lage legt der Aufrufer per class fest. --}}
+<span role="tooltip" {{ $attributes->merge(['class' => 'pointer-events-none invisible absolute z-20 rounded-md bg-gray-900 px-2.5 py-1.5 text-left text-xs font-normal leading-snug text-white opacity-0 shadow-lg transition-opacity group-hover/tip:visible group-hover/tip:opacity-100']) }}>{{ $slot }}</span>

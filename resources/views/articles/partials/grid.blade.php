@@ -58,7 +58,8 @@
                                   x-text="sold[{{ $article->id }}] ? '✓' : '+'"></span>
                         </div>
                     </div>
-                    <div class="p-3">
+                    {{-- relative: Tooltips spannen über den Textblock, die Karte schneidet mit overflow-hidden ab. --}}
+                    <div class="relative p-3">
                         @if ($showCategory ?? false)
                             <div class="truncate text-xs font-medium uppercase tracking-wide text-gray-400">{{ $article->category->name }}</div>
                         @endif
@@ -72,7 +73,7 @@
                             <span x-show="{{ $article->sold ? 'changed['.$article->id.'] && ' : '' }}! sold[{{ $article->id }}]" @if ($article->sold) x-cloak @endif
                                   class="truncate text-gray-500">{{ $article->condition?->label() }}</span>
                             <span x-show="{{ $article->sold ? 'changed['.$article->id.'] && ' : '' }}! sold[{{ $article->id }}]" @if ($article->sold) x-cloak @endif
-                                  class="shrink-0 font-semibold text-gray-900">@if ((float) $article->price > 0){{ $article->formattedPrice() }}@elseif ($article->price_suggestion !== null)<span class="font-normal text-violet-700" title="KI-Preisvorschlag (gebraucht auf Vinted){{ $article->price_reason ? ': '.$article->price_reason : '' }}">≈ {{ $article->formattedPriceSuggestion() }}</span>@else{{ $article->formattedPrice() }}@endif</span>
+                                  class="shrink-0 font-semibold text-gray-900">@if ((float) $article->price > 0){{ $article->formattedPrice() }}@elseif ($article->price_suggestion !== null)<span class="group/tip cursor-help font-normal text-violet-700">≈ {{ $article->formattedPriceSuggestion() }}<x-tooltip class="inset-x-2 bottom-full -mb-1"><span class="block font-medium">KI-Preisvorschlag, gebraucht auf Vinted</span>{{ $article->price_reason }}</x-tooltip></span>@else{{ $article->formattedPrice() }}@endif</span>
                             <span x-show="changed[{{ $article->id }}] && sold[{{ $article->id }}]" x-cloak class="truncate text-gray-500">verkauft</span>
                         </div>
                     </div>

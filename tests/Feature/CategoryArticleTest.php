@@ -982,10 +982,10 @@ class CategoryArticleTest extends TestCase
         $this->assertSame(['title' => 'Regenjacke', 'brand' => 'Jako-o', 'size' => '104', 'condition' => 'Gut'], $fake->calls[0]['context']);
 
         $this->get(route('articles.show', $article))->assertSee(['Preisvorschlag', '8,50', 'Markenjacke, leichte Gebrauchsspuren']);
-        $this->get(route('articles.edit', $article))->assertSee(['Preisvorschlag (KI, Vinted)', 'title="Markenjacke, leichte Gebrauchsspuren"'], false);
+        $this->get(route('articles.edit', $article))->assertSee(['Preisvorschlag (KI, Vinted)', 'role="tooltip"', 'Markenjacke, leichte Gebrauchsspuren'], false);
 
         // Liste: Vorschlag nur, solange kein Preis hinterlegt ist; öffentlich nie.
-        $this->get(route('categories.show', $category))->assertSee(['12,00 €', '≈ 3,00 €', '(gebraucht auf Vinted): Basic von H&amp;M'], false)->assertDontSee('≈ 8,50 €');
+        $this->get(route('categories.show', $category))->assertSee(['12,00 €', '≈ 3,00 €', 'KI-Preisvorschlag, gebraucht auf Vinted', 'Basic von H&amp;M'], false)->assertDontSee('≈ 8,50 €');
         $this->get(route('articles.index'))->assertSee('≈ 3,00 €');
         auth()->logout();
         $this->get($category->publicUrl())->assertOk()->assertDontSee(['3,00 €', '8,50 €']);
