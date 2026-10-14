@@ -982,6 +982,13 @@ class CategoryArticleTest extends TestCase
         $this->get(route('articles.show', $article))->assertSee(['Preisvorschlag', '8,50']);
         $this->get(route('articles.edit', $article))->assertSee('Preisvorschlag (KI, Vinted)');
 
+        // Liste: Vorschlag nur, solange kein Preis hinterlegt ist; öffentlich nie.
+        $this->get(route('categories.show', $category))->assertSee(['12,00 €', '≈ 3,00 €'])->assertDontSee('≈ 8,50 €');
+        $this->get(route('articles.index'))->assertSee('≈ 3,00 €');
+        auth()->logout();
+        $this->get($category->publicUrl())->assertOk()->assertDontSee(['3,00 €', '8,50 €']);
+        $this->actingAs(User::first());
+
         // Das Formular kann den Vorschlag nicht setzen.
         $this->put(route('articles.update', $article), ['brand' => 'Jako-o', 'size' => '104', 'price' => '12', 'price_suggestion' => '99'])->assertRedirect();
         $this->assertSame('8.50', $article->fresh()->price_suggestion);
