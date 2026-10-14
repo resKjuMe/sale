@@ -991,6 +991,16 @@ class CategoryArticleTest extends TestCase
         $this->get($category->publicUrl())->assertOk()->assertDontSee(['3,00 €', '8,50 €']);
         $this->actingAs(User::first());
 
+        // Knopf im Formular: ungespeicherte Angaben zählen, Preis und Verkaufspreis gehen nie an die KI.
+        $this->get(route('articles.edit', $article))->assertSee(['Preis vorschlagen', 'ai-price'], false);
+        $this->get(route('categories.articles.quick', $category))->assertDontSee('Preis vorschlagen');
+        $this->postJson(route('articles.ai-price', $article), [
+            'title' => 'Regenjacke gefüttert', 'brand' => 'Jako-o', 'size' => '110', 'condition' => 'very_good', 'price' => '40', 'sale_price' => '35',
+        ])->assertOk();
+        $this->assertSame(['title' => 'Regenjacke gefüttert', 'brand' => 'Jako-o', 'size' => '110', 'condition' => 'Sehr gut'], $fake->calls[2]['context']);
+        $this->assertSame('104', $article->fresh()->size, 'Formularwerte werden dabei nicht gespeichert.');
+        $this->postJson(route('articles.ai-price', $article), ['condition' => 'kaputt'])->assertJsonValidationErrors('condition');
+
         // Das Formular kann den Vorschlag nicht setzen.
         $this->put(route('articles.update', $article), ['brand' => 'Jako-o', 'size' => '104', 'price' => '12', 'price_suggestion' => '99'])->assertRedirect();
         $this->assertSame('8.50', $article->fresh()->price_suggestion);

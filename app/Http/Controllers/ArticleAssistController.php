@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ArticleCondition;
 use App\Models\Article;
 use App\Services\ArticleAssistant;
 use Illuminate\Http\JsonResponse;
@@ -80,9 +81,17 @@ class ArticleAssistController extends Controller
         return response()->json(['title' => $title]);
     }
 
-    // Für „Preisvorschläge" auf der Kategorieseite: nur das Anzeigefeld, der Preis selbst bleibt.
-    public function price(Article $article, ArticleAssistant $assistant): JsonResponse
+    // „Preisvorschläge" auf der Kategorieseite bzw. im Formular: nur das Anzeigefeld, der Preis selbst bleibt.
+    // Das Formular schickt seine ungespeicherten Angaben mit; Preis und Verkaufspreis bekommt die KI nie, sie sollen den Vorschlag nicht färben.
+    public function price(Request $request, Article $article, ArticleAssistant $assistant): JsonResponse
     {
+        $data = $request->validate([
+            'title' => ['nullable', 'string', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:255'],
+            'size' => ['nullable', 'string', 'max:50'],
+            'condition' => ['nullable', Rule::enum(ArticleCondition::class)],
+        ]);
+
         if (! $assistant->configured()) {
             return response()->json(['message' => 'Die KI ist nicht eingerichtet (ANTHROPIC_API_KEY fehlt).'], 503);
         }
@@ -94,10 +103,10 @@ class ArticleAssistController extends Controller
 
         try {
             $suggestion = $assistant->suggestPrice($images, [
-                'title' => $article->title,
-                'brand' => $article->brand,
-                'size' => $article->size,
-                'condition' => $article->condition?->label(),
+                'title' => $request->has('title') ? $data['title'] : $article->title,
+                'brand' => $data['brand'] ?? $article->brand,
+                'size' => $data['size'] ?? $article->size,
+                'condition' => $request->has('condition') ? ArticleCondition::tryFrom((string) $data['condition'])?->label() : $article->condition?->label(),
             ]);
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 502);

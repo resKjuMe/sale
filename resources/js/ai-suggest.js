@@ -6,7 +6,9 @@ function field(id) {
     return document.getElementById(id);
 }
 
-export default ({ url, articleId = null }) => ({
+const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+
+export default ({ url, articleId = null, priceUrl = null }) => ({
     busy: null,
     message: '',
     failed: false,
@@ -57,6 +59,51 @@ export default ({ url, articleId = null }) => ({
                 setTimeout(() => input.classList.remove('ring-2', 'ring-violet-400'), 2500);
             });
             this.show(filled.length ? 'Vorschlag übernommen – bitte kurz prüfen.' : 'Auf den Fotos war nichts Eindeutiges zu erkennen.', !filled.length);
+        } catch (e) {
+            this.show(e.message, true);
+        } finally {
+            this.busy = null;
+        }
+    },
+
+    // Speichert nur den Vorschlag; Preis und Verkaufspreis gehen bewusst nicht mit.
+    async suggestPrice() {
+        if (this.busy || !priceUrl) {
+            return;
+        }
+
+        this.busy = 'price';
+        this.show('Preis wird geschätzt …');
+
+        try {
+            const response = await fetch(priceUrl, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify(Object.fromEntries(['title', 'brand', 'size', 'condition'].map((id) => [id, field(id)?.value || null]))),
+            });
+            const data = await response.json().catch(() => ({}));
+            if ([401, 419].includes(response.status)) {
+                throw new Error('Sitzung abgelaufen – bitte die Seite neu laden.');
+            }
+            if (!response.ok) {
+                throw new Error(data.message ?? 'Die KI ist gerade nicht erreichbar.');
+            }
+            if (data.price == null) {
+                this.show('Für diesen Artikel gab es keinen Preisvorschlag.', true);
+                return;
+            }
+
+            const input = field('price_suggestion');
+            input.value = euro.format(data.price);
+            field('price_reason').textContent = data.reason ?? '';
+            field('price_suggestion_field').classList.remove('hidden');
+            input.classList.add('ring-2', 'ring-violet-400');
+            setTimeout(() => input.classList.remove('ring-2', 'ring-violet-400'), 2500);
+            this.show(`Vorschlag: ${euro.format(data.price)}` + (data.reason ? ` – ${data.reason}` : ''));
         } catch (e) {
             this.show(e.message, true);
         } finally {
