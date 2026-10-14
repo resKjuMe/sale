@@ -58,21 +58,26 @@ class ArticleAssistant
     }
 
     /**
-     * Angebotspreis in Euro für Vinted, auf 50 Cent gerundet; null, wenn die KI ihn nicht einschätzen kann.
+     * Angebotspreis in Euro für Vinted, auf 50 Cent gerundet, mit kurzer Begründung; price null, wenn die KI ihn nicht einschätzen kann.
      *
      * @param  list<string>  $images  Rohdaten (JPEG/PNG/WebP)
      * @param  array{title?: ?string, brand?: ?string, size?: ?string, condition?: ?string}  $context
+     * @return array{price: ?float, reason: ?string}
      */
-    public function suggestPrice(array $images, array $context = []): ?float
+    public function suggestPrice(array $images, array $context = []): array
     {
-        $price = $this->ask($images, 'price', self::priceInstruction($context), [
+        $nullable = fn (string $type) => ['anyOf' => [['type' => $type], ['type' => 'null']]];
+        $data = $this->ask($images, 'price', self::priceInstruction($context), [
             'type' => 'object',
-            'properties' => ['price' => ['anyOf' => [['type' => 'number'], ['type' => 'null']]]],
-            'required' => ['price'],
+            'properties' => ['price' => $nullable('number'), 'reason' => $nullable('string')],
+            'required' => ['price', 'reason'],
             'additionalProperties' => false,
-        ])['price'] ?? null;
+        ]);
+        $price = $data['price'] ?? null;
 
-        return is_numeric($price) && $price > 0 ? max(0.5, round($price * 2) / 2) : null;
+        return is_numeric($price) && $price > 0
+            ? ['price' => max(0.5, round($price * 2) / 2), 'reason' => self::clean($data['reason'] ?? null)]
+            : ['price' => null, 'reason' => null];
     }
 
     /**
@@ -169,7 +174,8 @@ class ArticleAssistant
             - Maßstab sind die Preise, zu denen vergleichbare gebrauchte Kinderkleidung auf Vinted tatsächlich weggeht, nicht der Neupreis. Gebrauchte Basics von Massenmarken bringen dort oft nur wenige Euro.
             - Berücksichtige Art des Kleidungsstücks, Marke, Größe, Zustand und auf den Fotos sichtbare Mängel (Flecken, Pilling, verwaschene Farben).
             - Käufer zahlen auf Vinted Versand und Käuferschutz zusätzlich; der Preis muss das aushalten.
-            - Ein einzelner Wert, auf 0,50 € gerundet. Kannst du den Artikel nicht einschätzen, setze price auf null.
+            - Ein einzelner Wert, auf 0,50 € gerundet. Kannst du den Artikel nicht einschätzen, setze price und reason auf null.
+            - reason: knappe deutsche Begründung, höchstens ein Satz und 120 Zeichen, z. B. „Massenmarke, leichte Gebrauchsspuren, Basics gehen für wenig weg".
             Bekannt zum Artikel: {$known}
             TXT;
     }

@@ -93,7 +93,7 @@ class ArticleAssistController extends Controller
         }
 
         try {
-            $price = $assistant->suggestPrice($images, [
+            $suggestion = $assistant->suggestPrice($images, [
                 'title' => $article->title,
                 'brand' => $article->brand,
                 'size' => $article->size,
@@ -103,11 +103,11 @@ class ArticleAssistController extends Controller
             return response()->json(['message' => $e->getMessage()], 502);
         }
 
-        if ($price !== null) {
-            $article->forceFill(['price_suggestion' => $price])->save();
+        if ($suggestion['price'] !== null) {
+            $article->forceFill(['price_suggestion' => $suggestion['price'], 'price_reason' => $suggestion['reason']])->save();
         }
 
-        return response()->json(['price' => $price]);
+        return response()->json($suggestion);
     }
 
     /**

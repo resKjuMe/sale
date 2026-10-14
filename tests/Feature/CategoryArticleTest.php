@@ -957,33 +957,35 @@ class CategoryArticleTest extends TestCase
             'image_path' => 'articles/main.jpg', 'title' => 'Regenjacke', 'brand' => 'Jako-o', 'size' => '104', 'condition' => ArticleCondition::Good, 'price' => 12,
         ]);
         $unclear = $category->articles()->create(['image_path' => 'articles/main.jpg', 'brand' => 'H&M', 'size' => '80']);
-        $unclear->forceFill(['price_suggestion' => 3])->save();
+        $unclear->forceFill(['price_suggestion' => 3, 'price_reason' => 'Basic von H&M'])->save();
 
         $fake = new class('test-key', ['brand_size' => 'claude-sonnet-5-5', 'title' => 'claude-haiku-5-5']) extends ArticleAssistant
         {
             public array $calls = [];
 
-            public function suggestPrice(array $images, array $context = []): ?float
+            public function suggestPrice(array $images, array $context = []): array
             {
                 $this->calls[] = compact('images', 'context');
 
-                return $context['brand'] === 'Jako-o' ? 8.5 : null;
+                return $context['brand'] === 'Jako-o'
+                    ? ['price' => 8.5, 'reason' => 'Markenjacke, leichte Gebrauchsspuren']
+                    : ['price' => null, 'reason' => null];
             }
         };
         $this->app->instance(ArticleAssistant::class, $fake);
 
-        $this->postJson(route('articles.ai-price', $article))->assertOk()->assertExactJson(['price' => 8.5]);
-        $this->postJson(route('articles.ai-price', $unclear))->assertOk()->assertExactJson(['price' => null]);
+        $this->postJson(route('articles.ai-price', $article))->assertOk()->assertExactJson(['price' => 8.5, 'reason' => 'Markenjacke, leichte Gebrauchsspuren']);
+        $this->postJson(route('articles.ai-price', $unclear))->assertOk()->assertExactJson(['price' => null, 'reason' => null]);
 
         $this->assertSame(['8.50', '12.00'], [$article->fresh()->price_suggestion, $article->fresh()->price]);
         $this->assertSame('3.00', $unclear->fresh()->price_suggestion, 'Ohne Ergebnis bleibt der alte Vorschlag.');
         $this->assertSame(['title' => 'Regenjacke', 'brand' => 'Jako-o', 'size' => '104', 'condition' => 'Gut'], $fake->calls[0]['context']);
 
-        $this->get(route('articles.show', $article))->assertSee(['Preisvorschlag', '8,50']);
-        $this->get(route('articles.edit', $article))->assertSee('Preisvorschlag (KI, Vinted)');
+        $this->get(route('articles.show', $article))->assertSee(['Preisvorschlag', '8,50', 'Markenjacke, leichte Gebrauchsspuren']);
+        $this->get(route('articles.edit', $article))->assertSee(['Preisvorschlag (KI, Vinted)', 'title="Markenjacke, leichte Gebrauchsspuren"'], false);
 
         // Liste: Vorschlag nur, solange kein Preis hinterlegt ist; öffentlich nie.
-        $this->get(route('categories.show', $category))->assertSee(['12,00 €', '≈ 3,00 €'])->assertDontSee('≈ 8,50 €');
+        $this->get(route('categories.show', $category))->assertSee(['12,00 €', '≈ 3,00 €', '(gebraucht auf Vinted): Basic von H&amp;M'], false)->assertDontSee('≈ 8,50 €');
         $this->get(route('articles.index'))->assertSee('≈ 3,00 €');
         auth()->logout();
         $this->get($category->publicUrl())->assertOk()->assertDontSee(['3,00 €', '8,50 €']);

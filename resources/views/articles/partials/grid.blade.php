@@ -72,7 +72,7 @@
                             <span x-show="{{ $article->sold ? 'changed['.$article->id.'] && ' : '' }}! sold[{{ $article->id }}]" @if ($article->sold) x-cloak @endif
                                   class="truncate text-gray-500">{{ $article->condition?->label() }}</span>
                             <span x-show="{{ $article->sold ? 'changed['.$article->id.'] && ' : '' }}! sold[{{ $article->id }}]" @if ($article->sold) x-cloak @endif
-                                  class="shrink-0 font-semibold text-gray-900">@if ((float) $article->price > 0){{ $article->formattedPrice() }}@elseif ($article->price_suggestion !== null)<span class="font-normal text-violet-700" title="KI-Preisvorschlag (gebraucht auf Vinted)">≈ {{ $article->formattedPriceSuggestion() }}</span>@else{{ $article->formattedPrice() }}@endif</span>
+                                  class="shrink-0 font-semibold text-gray-900">@if ((float) $article->price > 0){{ $article->formattedPrice() }}@elseif ($article->price_suggestion !== null)<span class="font-normal text-violet-700" title="KI-Preisvorschlag (gebraucht auf Vinted){{ $article->price_reason ? ': '.$article->price_reason : '' }}">≈ {{ $article->formattedPriceSuggestion() }}</span>@else{{ $article->formattedPrice() }}@endif</span>
                             <span x-show="changed[{{ $article->id }}] && sold[{{ $article->id }}]" x-cloak class="truncate text-gray-500">verkauft</span>
                         </div>
                     </div>
