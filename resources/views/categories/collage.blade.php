@@ -7,7 +7,7 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             @if ($filter)
-                <x-article-filter :filter="$filter" :articles="$source" :with-categories="$withCategories" :with-sold-toggle="false" class="mb-6 sm:rounded-lg" />
+                <x-article-filter :filter="$filter" :articles="$source" :with-categories="$withCategories" :with-sold-toggle="false" with-search class="mb-6 sm:rounded-lg" />
             @endif
 
             <div data-live-target="results"

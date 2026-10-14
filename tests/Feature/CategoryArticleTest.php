@@ -495,6 +495,31 @@ class CategoryArticleTest extends TestCase
             ->assertSee('Hose Beta')->assertDontSee(['Body Alpha', 'Hose Gamma']);
     }
 
+    public function test_category_and_overview_search_title_brand_size_and_buyer(): void
+    {
+        $bodys = Category::create(['name' => 'Bodys']);
+        $hosen = Category::create(['name' => 'Hosen']);
+        $bodys->articles()->createMany([
+            ['image_path' => 'articles/a.jpg', 'title' => 'Body Alpha', 'brand' => 'Zara', 'size' => '68 / 72'],
+            ['image_path' => 'articles/b.jpg', 'title' => 'Body 100%', 'brand' => 'H&M', 'size' => '74', 'sold' => true, 'buyer_name' => 'Erika'],
+        ]);
+        $hosen->articles()->create(['image_path' => 'articles/c.jpg', 'title' => 'Hose Gamma', 'brand' => 'Zara', 'size' => '74']);
+
+        $this->get(route('categories.show', $bodys))->assertSee('name="q"', false);
+        $this->get(route('categories.show', [$bodys, 'q' => '  zara  ']))
+            ->assertSee(['Body Alpha', 'value="zara"', 'Zurücksetzen'], false)->assertDontSee(['Body 100%', 'Hose Gamma']);
+        $this->get(route('articles.index', ['q' => 'zara 74']))
+            ->assertSee(['Hose Gamma', '1 von 3 Artikeln'])->assertDontSee(['Body Alpha', 'Body 100%']);
+        $this->get(route('articles.index', ['q' => 'erika']))->assertSee('Body 100%')->assertDontSee(['Body Alpha', 'Hose Gamma']);
+        // Platzhalter werden wörtlich gesucht.
+        $this->get(route('articles.index', ['q' => '%']))->assertSee('Body 100%')->assertDontSee(['Body Alpha', 'Hose Gamma']);
+        $this->get(route('articles.index', ['q' => 'zara']))->assertSee(route('articles.collage', ['q' => 'zara']), false);
+
+        // Öffentliche Seiten bieten keine Suche und ignorieren den Parameter.
+        $this->get($bodys->publicUrl().'?q=zara')
+            ->assertDontSee('name="q"', false)->assertSee(['Body Alpha', 'Body 100%']);
+    }
+
     public function test_status_timestamps_are_set_and_cleared_with_their_flags(): void
     {
         $this->travelTo(now()->setDateTime(2026, 10, 9, 12, 0));

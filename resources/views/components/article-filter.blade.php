@@ -1,4 +1,4 @@
-@props(['filter', 'articles', 'withSoldToggle' => true, 'withCategories' => false, 'withPending' => false, 'withStale' => false])
+@props(['filter', 'articles', 'withSoldToggle' => true, 'withCategories' => false, 'withPending' => false, 'withStale' => false, 'withSearch' => false])
 
 @php
     // Jede Gruppe zählt unter allen übrigen Filtern; gewählte Werte bleiben zum Abwählen sichtbar.
@@ -27,9 +27,14 @@
         : [];
 @endphp
 
-@if ($groups || $withSoldToggle)
+@if ($groups || $withSoldToggle || $withSearch)
     <form method="GET" action="{{ url()->current() }}" data-live-filter {{ $attributes->merge(['class' => 'group/filter rounded-lg bg-white p-4 shadow-sm']) }}>
         <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            @if ($withSearch)
+                <input type="search" name="q" value="{{ $filter->search }}" placeholder="Suchen …" aria-label="Artikel suchen" maxlength="100" autocomplete="off"
+                       class="w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:w-64">
+            @endif
+
             @if ($withSoldToggle)
                 <label class="inline-flex cursor-pointer select-none items-center gap-3">
                     <input type="checkbox" name="hide_sold" value="1" class="peer sr-only" @checked($filter->hideSold)>

@@ -6,6 +6,7 @@ use App\Models\Category;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class ArticleFilter
 {
@@ -24,12 +25,16 @@ class ArticleFilter
         public readonly bool $stale = false,
         public readonly bool $soldOnly = false,
         public readonly bool $paidOnly = false,
+        public readonly string $search = '',
     ) {}
 
     // Interne Status-Filter: Parameter => Beschriftung
     public const STATUS = ['sold' => 'Verkauft', 'paid' => 'Bezahlt'];
 
     public const PENDING = ['payment' => 'Zahlung ausstehend', 'shipping' => 'Versand/Abholung ausstehend'];
+
+    // Jedes Suchwort muss in einer dieser Spalten vorkommen.
+    private const SEARCH_COLUMNS = ['title', 'brand', 'size', 'buyer_name'];
 
     public static function fromRequest(Request $request, bool $internal = true): self
     {
@@ -42,6 +47,7 @@ class ArticleFilter
             $internal && $request->boolean('stale'),
             $internal && $request->boolean('sold'),
             $internal && $request->boolean('paid'),
+            $internal && is_string($request->query('q')) ? trim(mb_substr(Str::squish($request->query('q')), 0, 100)) : '',
         );
     }
 
@@ -59,12 +65,22 @@ class ArticleFilter
             }))
             ->when($this->stale, fn (Builder $query) => $query->stale())
             ->when($this->soldOnly, fn (Builder $query) => $query->where('sold', true))
-            ->when($this->paidOnly, fn (Builder $query) => $query->where('sold', true)->where('paid', true));
+            ->when($this->paidOnly, fn (Builder $query) => $query->where('sold', true)->where('paid', true))
+            ->when($this->search !== '', function (Builder $query) {
+                foreach (explode(' ', $this->search) as $word) {
+                    $like = '%'.addcslashes($word, '\\%_').'%';
+                    $query->where(function (Builder $query) use ($like) {
+                        foreach (self::SEARCH_COLUMNS as $column) {
+                            $query->orWhere($column, 'like', $like);
+                        }
+                    });
+                }
+            });
     }
 
     public function isActive(): bool
     {
-        return $this->sizes !== [] || $this->brands !== [] || $this->hideSold || $this->categories !== [] || $this->pending !== [] || $this->stale || $this->soldOnly || $this->paidOnly;
+        return $this->sizes !== [] || $this->brands !== [] || $this->hideSold || $this->categories !== [] || $this->pending !== [] || $this->stale || $this->soldOnly || $this->paidOnly || $this->search !== '';
     }
 
     public function query(): array
@@ -78,6 +94,7 @@ class ArticleFilter
             'stale' => $this->stale ? 1 : null,
             'sold' => $this->soldOnly ? 1 : null,
             'paid' => $this->paidOnly ? 1 : null,
+            'q' => $this->search,
         ]);
     }
 
@@ -92,6 +109,7 @@ class ArticleFilter
             $key === 'stale' ? false : $this->stale,
             $key === 'sold' ? false : $this->soldOnly,
             $key === 'paid' ? false : $this->paidOnly,
+            $this->search,
         );
     }
 

@@ -66,7 +66,7 @@
 
             <x-public-link :url="$category->publicUrl()" :regenerate="route('categories.public-link', $category)" />
 
-            <x-article-filter :filter="$filter" :articles="$category->articles()" with-pending with-stale class="mb-6 sm:rounded-lg" />
+            <x-article-filter :filter="$filter" :articles="$category->articles()" with-pending with-stale with-search class="mb-6 sm:rounded-lg" />
 
             @include('articles.partials.grid', [
                 'emptyText' => $filter->isActive() ? 'Keine Artikel passen zum Filter.' : 'In dieser Kategorie gibt es noch keine Artikel.',

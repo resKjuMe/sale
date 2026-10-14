@@ -1,8 +1,11 @@
 // Filterformulare ohne Neuladen: Seite im Hintergrund holen, markierte Bereiche tauschen, URL mitführen.
 let controller = null;
+let typing = null;
 
 async function update(form) {
-    const params = new URLSearchParams(new FormData(form));
+    clearTimeout(typing);
+    // Leere Suche nicht in die URL schreiben.
+    const params = new URLSearchParams([...new FormData(form)].filter(([, value]) => value !== ''));
     const url = form.action + (params.size ? `?${params}` : '');
     const targets = document.querySelectorAll('[data-live-target]');
 
@@ -34,9 +37,17 @@ async function update(form) {
 
 document.addEventListener('change', (event) => {
     const form = event.target.closest('form[data-live-filter]');
-    // Die Aufklapp-Checkbox hat keinen Namen und filtert nicht.
-    if (form && event.target.name) {
+    // Die Aufklapp-Checkbox hat keinen Namen und filtert nicht; die Suche läuft über "input".
+    if (form && event.target.name && event.target.type !== 'search') {
         update(form);
+    }
+});
+
+document.addEventListener('input', (event) => {
+    const form = event.target.closest('form[data-live-filter]');
+    if (form && event.target.type === 'search') {
+        clearTimeout(typing);
+        typing = setTimeout(() => update(form), 300);
     }
 });
 
@@ -53,6 +64,7 @@ document.addEventListener('click', (event) => {
     if (form) {
         event.preventDefault();
         form.querySelectorAll('input[name]').forEach((input) => { input.checked = false; });
+        form.querySelectorAll('input[type="search"]').forEach((input) => { input.value = ''; });
         update(form);
     }
 });
