@@ -4,8 +4,8 @@
         <div class="flex flex-wrap items-baseline justify-between gap-2">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ $title }}</h2>
             @if ($articles->isNotEmpty())
-                <span class="text-sm text-gray-500">
-                    {{ $articles->count() === 1 ? '1 Artikel' : $articles->count().' Artikel' }}
+                <span class="text-sm text-gray-500" x-data="{ left: {{ $articles->count() }} }" @quick-fill-done.window="left--">
+                    <span x-text="left === 1 ? '1 Artikel' : `${left} Artikel`">{{ $articles->count() === 1 ? '1 Artikel' : $articles->count().' Artikel' }}</span>
                     @if ($type === 'zahlung')
                         · offen <span class="font-semibold text-amber-700">{{ \App\Models\Article::euro($sum) }}</span>
                     @endif
@@ -22,8 +22,12 @@
             <div class="px-4 sm:px-0"><x-undo-flash /></div>
 
             <div class="px-4 sm:px-0">
+            @if ($fill)
+                <x-quick-fill-list :articles="$articles" :type="$type" :fields="$fill" :pickup="$pickup" :empty="$empty" />
+            @else
             <x-dashboard-list :title="$mark ? 'Älteste zuerst' : 'Zum Bearbeiten antippen'" accent="amber"
                               :mark="$mark" :edit="! $mark" :articles="$articles" :empty="$empty" />
+            @endif
             </div>
         </div>
     </div>
