@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\AiCredit;
+use App\Support\AiBudget;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +20,7 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user(),
+            'ai' => AiBudget::current(),
         ]);
     }
 
@@ -35,6 +38,17 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    }
+
+    // Guthaben aus der Anthropic-Console übernehmen; ab jetzt wird davon abgezogen.
+    public function updateAiCredit(Request $request): RedirectResponse
+    {
+        $request->merge(['amount' => str_replace(',', '.', trim((string) $request->input('amount')))]);
+        $data = $request->validateWithBag('aiCredit', ['amount' => ['required', 'numeric', 'min:0', 'max:100000']], [], ['amount' => 'Guthaben']);
+
+        AiCredit::create(['user_id' => $request->user()->id, 'amount_micros' => (int) round($data['amount'] * 1_000_000)]);
+
+        return Redirect::route('profile.edit')->with('status', 'ai-credit-updated');
     }
 
     /**

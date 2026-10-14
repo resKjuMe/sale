@@ -7,6 +7,7 @@ use Anthropic\Beta\Messages\BetaImageBlockParam;
 use Anthropic\Beta\Messages\BetaTextBlockParam;
 use Anthropic\Client;
 use Anthropic\Core\Exceptions\APIException;
+use App\Models\AiUsage;
 use RuntimeException;
 
 /**
@@ -76,6 +77,9 @@ class ArticleAssistant
         } catch (APIException $e) {
             throw new RuntimeException('Die KI ist gerade nicht erreichbar. Bitte später erneut versuchen.', previous: $e);
         }
+
+        // Auch Ablehnungen kosten.
+        AiUsage::record($message, $mode, $model);
 
         if ($message->stopReason === 'refusal') {
             throw new RuntimeException('Die KI konnte zu diesen Fotos nichts sagen.');
