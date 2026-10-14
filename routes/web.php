@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::post('articles/batch', [BatchArticleController::class, 'update'])->name('articles.batch.update');
     Route::post('articles/ai-suggest', ArticleAssistController::class)->middleware('throttle:30,1')->name('articles.ai-suggest');
     Route::post('articles/{article}/ai-title', [ArticleAssistController::class, 'title'])->middleware('throttle:30,1')->name('articles.ai-title');
+    Route::post('articles/{article}/ai-price', [ArticleAssistController::class, 'price'])->middleware('throttle:30,1')->name('articles.ai-price');
     Route::post('articles/public-link', [ArticleController::class, 'regeneratePublicLink'])->name('articles.public-link');
     Route::resource('categories.articles', ArticleController::class)->shallow()->except('index');
     Route::patch('articles/{article}/sold', [ArticleController::class, 'sold'])->name('articles.sold');

@@ -80,6 +80,36 @@ class ArticleAssistController extends Controller
         return response()->json(['title' => $title]);
     }
 
+    // Für „Preisvorschläge" auf der Kategorieseite: nur das Anzeigefeld, der Preis selbst bleibt.
+    public function price(Article $article, ArticleAssistant $assistant): JsonResponse
+    {
+        if (! $assistant->configured()) {
+            return response()->json(['message' => 'Die KI ist nicht eingerichtet (ANTHROPIC_API_KEY fehlt).'], 503);
+        }
+
+        $images = array_slice(array_values(array_filter($this->storedImages($article))), 0, self::MAX_IMAGES);
+        if ($images === []) {
+            return response()->json(['message' => 'Der Artikel hat kein Foto.'], 422);
+        }
+
+        try {
+            $price = $assistant->suggestPrice($images, [
+                'title' => $article->title,
+                'brand' => $article->brand,
+                'size' => $article->size,
+                'condition' => $article->condition?->label(),
+            ]);
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 502);
+        }
+
+        if ($price !== null) {
+            $article->forceFill(['price_suggestion' => $price])->save();
+        }
+
+        return response()->json(['price' => $price]);
+    }
+
     /**
      * @return list<?string>
      */

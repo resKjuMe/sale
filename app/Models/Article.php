@@ -56,6 +56,7 @@ class Article extends Model
         return [
             'condition' => ArticleCondition::class,
             'price' => 'decimal:2',
+            'price_suggestion' => 'decimal:2',
             'sold' => 'boolean',
             'sold_at' => 'datetime',
             'paid' => 'boolean',
@@ -218,6 +219,11 @@ class Article extends Model
     public function formattedPrice(): ?string
     {
         return self::euro($this->price);
+    }
+
+    public function formattedPriceSuggestion(): ?string
+    {
+        return self::euro($this->price_suggestion);
     }
 
     public function formattedSalePrice(): ?string

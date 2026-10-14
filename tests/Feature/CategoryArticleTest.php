@@ -937,7 +937,7 @@ class CategoryArticleTest extends TestCase
         };
         $this->app->instance(ArticleAssistant::class, $fake);
 
-        $this->get(route('categories.show', $category))->assertSee(['Titel per KI', 'aiTitles(', 'ai-title'], false);
+        $this->get(route('categories.show', $category))->assertSee(['Titel per KI', 'aiBatch(', 'ai-title', 'Preisvorschläge', 'ai-price'], false);
 
         $this->postJson(route('articles.ai-title', $article))->assertOk()->assertExactJson(['title' => 'Gestreifter Body']);
         $this->postJson(route('articles.ai-title', $unclear))->assertOk()->assertExactJson(['title' => null]);
@@ -949,13 +949,52 @@ class CategoryArticleTest extends TestCase
         $this->assertSame(['brand' => 'Zara', 'size' => '74'], $fake->calls[0]['context']);
     }
 
+    public function test_ai_price_suggestion_is_saved_without_touching_the_price(): void
+    {
+        $category = Category::create(['name' => 'Jacken']);
+        Storage::disk('public')->put('articles/main.jpg', UploadedFile::fake()->image('main.jpg')->getContent());
+        $article = $category->articles()->create([
+            'image_path' => 'articles/main.jpg', 'title' => 'Regenjacke', 'brand' => 'Jako-o', 'size' => '104', 'condition' => ArticleCondition::Good, 'price' => 12,
+        ]);
+        $unclear = $category->articles()->create(['image_path' => 'articles/main.jpg', 'brand' => 'H&M', 'size' => '80']);
+        $unclear->forceFill(['price_suggestion' => 3])->save();
+
+        $fake = new class('test-key', ['brand_size' => 'claude-sonnet-5-5', 'title' => 'claude-haiku-5-5']) extends ArticleAssistant
+        {
+            public array $calls = [];
+
+            public function suggestPrice(array $images, array $context = []): ?float
+            {
+                $this->calls[] = compact('images', 'context');
+
+                return $context['brand'] === 'Jako-o' ? 8.5 : null;
+            }
+        };
+        $this->app->instance(ArticleAssistant::class, $fake);
+
+        $this->postJson(route('articles.ai-price', $article))->assertOk()->assertExactJson(['price' => 8.5]);
+        $this->postJson(route('articles.ai-price', $unclear))->assertOk()->assertExactJson(['price' => null]);
+
+        $this->assertSame(['8.50', '12.00'], [$article->fresh()->price_suggestion, $article->fresh()->price]);
+        $this->assertSame('3.00', $unclear->fresh()->price_suggestion, 'Ohne Ergebnis bleibt der alte Vorschlag.');
+        $this->assertSame(['title' => 'Regenjacke', 'brand' => 'Jako-o', 'size' => '104', 'condition' => 'Gut'], $fake->calls[0]['context']);
+
+        $this->get(route('articles.show', $article))->assertSee(['Preisvorschlag', '8,50']);
+        $this->get(route('articles.edit', $article))->assertSee('Preisvorschlag (KI, Vinted)');
+
+        // Das Formular kann den Vorschlag nicht setzen.
+        $this->put(route('articles.update', $article), ['brand' => 'Jako-o', 'size' => '104', 'price' => '12', 'price_suggestion' => '99'])->assertRedirect();
+        $this->assertSame('8.50', $article->fresh()->price_suggestion);
+    }
+
     public function test_ai_suggestion_reports_missing_api_key(): void
     {
         $this->app->instance(ArticleAssistant::class, new ArticleAssistant(null, ['brand_size' => 'claude-sonnet-5-5', 'title' => 'claude-haiku-5-5']));
         $article = Category::create(['name' => 'Bodys'])->articles()->create(['image_path' => 'articles/a.jpg', 'brand' => 'Zara', 'size' => '74']);
         $this->get(route('articles.edit', $article))->assertOk()->assertDontSee(['Titel vorschlagen', 'aiSuggest(']);
-        $this->get(route('categories.show', $article->category))->assertOk()->assertDontSee('aiTitles(');
+        $this->get(route('categories.show', $article->category))->assertOk()->assertDontSee('aiBatch(');
         $this->postJson(route('articles.ai-title', $article))->assertStatus(503);
+        $this->postJson(route('articles.ai-price', $article))->assertStatus(503);
 
         $this->postJson(route('articles.ai-suggest'), ['mode' => 'title', 'images' => [UploadedFile::fake()->image('a.jpg')]])
             ->assertStatus(503)->assertJson(['message' => 'Die KI ist nicht eingerichtet (ANTHROPIC_API_KEY fehlt).']);

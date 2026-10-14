@@ -16,12 +16,28 @@
                     <x-secondary-button type="button">Neuer Artikel</x-secondary-button>
                 </a>
                 @if (app(\App\Services\ArticleAssistant::class)->configured() && $category->articles()->exists())
-                    <div x-data="aiTitles({ urls: @js($category->articles()->pluck('id')->map(fn ($id) => route('articles.ai-title', $id))) })" class="flex items-center gap-2">
-                        <button type="button" x-show="!running" x-on:click="start()"
-                                class="inline-flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-violet-800 transition hover:bg-violet-100">
-                            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 1l1.9 5.1L17 8l-5.1 1.9L10 15l-1.9-5.1L3 8l5.1-1.9L10 1zm6 10l.9 2.1L19 14l-2.1.9L16 17l-.9-2.1L13 14l2.1-.9L16 11z" /></svg>
-                            Titel per KI
-                        </button>
+                    @php($articleIds = $category->articles()->pluck('id'))
+                    <div x-data="aiBatch({ urls: @js(['title' => $articleIds->map(fn ($id) => route('articles.ai-title', $id)), 'price' => $articleIds->map(fn ($id) => route('articles.ai-price', $id))]) })" class="flex items-center gap-2">
+                        {{-- Hauptknopf setzt Titel, das Menü bietet weitere KI-Aktionen. --}}
+                        <div x-show="!running" class="relative inline-flex" x-on:click.outside="open = false" x-on:keydown.escape="open = false">
+                            <button type="button" x-on:click="start('title')"
+                                    class="inline-flex items-center gap-1.5 rounded-l-md border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-violet-800 transition hover:bg-violet-100">
+                                <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 1l1.9 5.1L17 8l-5.1 1.9L10 15l-1.9-5.1L3 8l5.1-1.9L10 1zm6 10l.9 2.1L19 14l-2.1.9L16 17l-.9-2.1L13 14l2.1-.9L16 11z" /></svg>
+                                Titel per KI
+                            </button>
+                            <button type="button" x-on:click="open = ! open" aria-haspopup="menu" :aria-expanded="open" aria-label="Weitere KI-Aktionen"
+                                    class="inline-flex items-center rounded-r-md border border-l-0 border-violet-200 bg-violet-50 px-2 py-2 text-violet-800 transition hover:bg-violet-100">
+                                <svg class="h-4 w-4 transition-transform" :class="open && 'rotate-180'" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+                            </button>
+                            <div x-show="open" x-cloak x-transition.origin.top.right role="menu"
+                                 class="absolute right-0 top-full z-50 mt-1 w-56 rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5">
+                                <button type="button" role="menuitem" x-on:click="start('title')" class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-violet-50">Titel</button>
+                                <button type="button" role="menuitem" x-on:click="start('price')" class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-violet-50">
+                                    Preisvorschläge
+                                    <span class="block text-xs text-gray-500">Gebraucht auf Vinted, Preise bleiben unverändert</span>
+                                </button>
+                            </div>
+                        </div>
                         <template x-if="running">
                             <span class="inline-flex items-center gap-2 text-sm text-violet-800">
                                 <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" class="opacity-25" /><path d="M21 12a9 9 0 00-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" /></svg>

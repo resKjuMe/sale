@@ -11,14 +11,14 @@ use App\Models\AiUsage;
 use RuntimeException;
 
 /**
- * Liest Marke und Größe aus Artikelfotos (bevorzugt vom Etikett) oder schlägt einen Titel vor.
+ * Liest Marke und Größe aus Artikelfotos (bevorzugt vom Etikett) oder schlägt Titel bzw. Vinted-Preis vor.
  */
 class ArticleAssistant
 {
     public const MODES = ['brand_size', 'title'];
 
     // Etiketten brauchen Auflösung, für den Titel reicht eine grobe Ansicht.
-    private const MAX_EDGE = ['brand_size' => 1568, 'title' => 800];
+    private const MAX_EDGE = ['brand_size' => 1568, 'title' => 800, 'price' => 1024];
 
     // Haiku kennt keinen serverseitigen Refusal-Fallback.
     private const WITHOUT_FALLBACK = 'claude-haiku-';
@@ -48,6 +48,39 @@ class ArticleAssistant
      */
     public function suggest(array $images, string $mode, array $context = []): array
     {
+        $data = $this->ask($images, $mode, $this->instruction($mode, $context), self::schema());
+
+        return [
+            'brand' => self::clean($data['brand'] ?? null),
+            'size' => self::clean($data['size'] ?? null),
+            'title' => self::clean($data['title'] ?? null),
+        ];
+    }
+
+    /**
+     * Angebotspreis in Euro für Vinted, auf 50 Cent gerundet; null, wenn die KI ihn nicht einschätzen kann.
+     *
+     * @param  list<string>  $images  Rohdaten (JPEG/PNG/WebP)
+     * @param  array{title?: ?string, brand?: ?string, size?: ?string, condition?: ?string}  $context
+     */
+    public function suggestPrice(array $images, array $context = []): ?float
+    {
+        $price = $this->ask($images, 'price', self::priceInstruction($context), [
+            'type' => 'object',
+            'properties' => ['price' => ['anyOf' => [['type' => 'number'], ['type' => 'null']]]],
+            'required' => ['price'],
+            'additionalProperties' => false,
+        ])['price'] ?? null;
+
+        return is_numeric($price) && $price > 0 ? max(0.5, round($price * 2) / 2) : null;
+    }
+
+    /**
+     * @param  list<string>  $images
+     * @return array<string, mixed> die JSON-Antwort
+     */
+    private function ask(array $images, string $mode, string $instruction, array $schema): array
+    {
         if (! $this->configured()) {
             throw new RuntimeException('Die KI ist nicht eingerichtet (ANTHROPIC_API_KEY fehlt).');
         }
@@ -56,15 +89,16 @@ class ArticleAssistant
             fn (string $image) => BetaImageBlockParam::with(source: BetaBase64ImageSource::with(data: base64_encode(self::shrink($image, self::MAX_EDGE[$mode])), mediaType: 'image/jpeg')),
             $images,
         );
-        $content[] = BetaTextBlockParam::with(text: $this->instruction($mode, $context));
+        $content[] = BetaTextBlockParam::with(text: $instruction);
 
-        $model = $this->models[$mode];
+        // Preise brauchen Marktwissen wie das Etikettenlesen.
+        $model = $this->models[$mode] ?? $this->models['brand_size'];
         $params = [
             'model' => $model,
             'maxTokens' => 16000,
             'system' => self::SYSTEM,
             'messages' => [['role' => 'user', 'content' => $content]],
-            'outputConfig' => ['effort' => 'low', 'format' => ['type' => 'json_schema', 'schema' => self::schema()]],
+            'outputConfig' => ['effort' => 'low', 'format' => ['type' => 'json_schema', 'schema' => $schema]],
             'workspaceID' => $this->workspaceId ?: null,
         ];
         if (! str_starts_with($model, self::WITHOUT_FALLBACK)) {
@@ -89,11 +123,7 @@ class ArticleAssistant
             if ($block->type === 'text') {
                 $data = json_decode($block->text, true);
                 if (is_array($data)) {
-                    return [
-                        'brand' => self::clean($data['brand'] ?? null),
-                        'size' => self::clean($data['size'] ?? null),
-                        'title' => self::clean($data['title'] ?? null),
-                    ];
+                    return $data;
                 }
             }
         }
@@ -121,6 +151,25 @@ class ArticleAssistant
             Schlage einen kurzen deutschen Titel für die Verkaufsanzeige vor. brand und size bleiben null.
             - 2 bis 6 Wörter, beschreibt Art des Kleidungsstücks und auffällige Merkmale (Farbe, Muster, Motiv, Schnitt).
             - Ohne Marke, Größe, Preis, Zustand und Emojis. Beispiel: „Gestreifter Langarmbody mit Knopfleiste".
+            Bekannt zum Artikel: {$known}
+            TXT;
+    }
+
+    private static function priceInstruction(array $context): string
+    {
+        $known = implode(' · ', array_filter([
+            $context['title'] ?? null,
+            $context['brand'] ?? null,
+            isset($context['size']) ? 'Gr. '.$context['size'] : null,
+            isset($context['condition']) ? 'Zustand: '.$context['condition'] : null,
+        ]));
+
+        return <<<TXT
+            Schlage einen Angebotspreis in Euro vor, zu dem dieser Artikel gebraucht auf Vinted (Deutschland) zügig verkauft wird.
+            - Maßstab sind die Preise, zu denen vergleichbare gebrauchte Kinderkleidung auf Vinted tatsächlich weggeht, nicht der Neupreis. Gebrauchte Basics von Massenmarken bringen dort oft nur wenige Euro.
+            - Berücksichtige Art des Kleidungsstücks, Marke, Größe, Zustand und auf den Fotos sichtbare Mängel (Flecken, Pilling, verwaschene Farben).
+            - Käufer zahlen auf Vinted Versand und Käuferschutz zusätzlich; der Preis muss das aushalten.
+            - Ein einzelner Wert, auf 0,50 € gerundet. Kannst du den Artikel nicht einschätzen, setze price auf null.
             Bekannt zum Artikel: {$known}
             TXT;
     }

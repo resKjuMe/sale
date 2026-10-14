@@ -5,7 +5,7 @@
         ? number_format($count / 1_000_000, 1, ',', '.').' Mio.'
         : number_format($count, 0, ',', '.');
     $remaining = $ai->remaining();
-    $modes = ['brand_size' => 'Marke/Größe erkennen', 'title' => 'Titel vorschlagen'];
+    $modes = ['brand_size' => 'Marke/Größe erkennen', 'title' => 'Titel vorschlagen', 'price' => 'Preis vorschlagen'];
 @endphp
 
 <section>

@@ -34,6 +34,7 @@ return [
         'models' => [
             'brand_size' => env('ANTHROPIC_MODEL_BRAND_SIZE', 'claude-sonnet-5-5'),
             'title' => env('ANTHROPIC_MODEL_TITLE', 'claude-haiku-5-5'),
+            'price' => env('ANTHROPIC_MODEL_PRICE', 'claude-sonnet-5-5'),
         ],
         // Nur für Keys, die an keinen Workspace gebunden sind.
         'workspace' => env('ANTHROPIC_WORKSPACE_ID'),

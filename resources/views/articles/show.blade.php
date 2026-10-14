@@ -67,6 +67,10 @@
                     <dd class="text-gray-900">{{ $article->condition?->label() ?? '–' }}</dd>
                     <dt class="text-gray-500">Preis</dt>
                     <dd class="text-gray-900 font-semibold">{{ $article->formattedPrice() ?? '–' }}</dd>
+                    @if ($article->price_suggestion !== null)
+                        <dt class="text-gray-500">Preisvorschlag</dt>
+                        <dd class="text-gray-900">{{ $article->formattedPriceSuggestion() }} <span class="text-xs text-gray-500">(KI, gebraucht auf Vinted)</span></dd>
+                    @endif
                     <dt class="text-gray-500">Vinted</dt>
                     <dd class="text-gray-900">
                         @if ($article->vinted_url)
