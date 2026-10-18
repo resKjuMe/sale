@@ -958,6 +958,7 @@ class CategoryArticleTest extends TestCase
         ]);
         $unclear = $category->articles()->create(['image_path' => 'articles/main.jpg', 'brand' => 'H&M', 'size' => '80']);
         $unclear->forceFill(['price_suggestion' => 3, 'price_reason' => 'Basic von H&M'])->save();
+        $category->articles()->create(['image_path' => 'articles/main.jpg', 'title' => 'Schlafsack', 'brand' => 'fillikid', 'size' => '90', 'price' => 6, 'sale_price' => 4, 'sold' => true]);
 
         $fake = new class('test-key', ['brand_size' => 'claude-sonnet-5-5', 'title' => 'claude-haiku-5-5']) extends ArticleAssistant
         {
@@ -979,7 +980,12 @@ class CategoryArticleTest extends TestCase
 
         $this->assertSame(['8.50', '12.00'], [$article->fresh()->price_suggestion, $article->fresh()->price]);
         $this->assertSame('3.00', $unclear->fresh()->price_suggestion, 'Ohne Ergebnis bleibt der alte Vorschlag.');
-        $this->assertSame(['title' => 'Regenjacke', 'brand' => 'Jako-o', 'size' => '104', 'condition' => 'Gut'], $fake->calls[0]['context']);
+        $this->assertSame(['title' => 'Regenjacke', 'brand' => 'Jako-o', 'size' => '104', 'condition' => 'Gut', 'references' => ['Schlafsack · fillikid · Gr. 90: verkauft für 4,00 €']], $fake->calls[0]['context']);
+        $this->assertSame(
+            ['Schlafsack · fillikid · Gr. 90: verkauft für 4,00 €', 'Regenjacke · Jako-o · Gr. 104 · Gut: angeboten für 12,00 €'],
+            $fake->calls[1]['context']['references'],
+            'Eigene Preise anderer Artikel dienen als Maßstab, erzielte zuerst.',
+        );
 
         $this->get(route('articles.show', $article))->assertSee(['Preisvorschlag', '8,50', 'Markenjacke, leichte Gebrauchsspuren']);
         $this->get(route('articles.edit', $article))->assertSee(['Preisvorschlag (KI, Vinted)', 'role="tooltip"', 'Markenjacke, leichte Gebrauchsspuren'], false);
@@ -997,7 +1003,7 @@ class CategoryArticleTest extends TestCase
         $this->postJson(route('articles.ai-price', $article), [
             'title' => 'Regenjacke gefüttert', 'brand' => 'Jako-o', 'size' => '110', 'condition' => 'very_good', 'price' => '40', 'sale_price' => '35',
         ])->assertOk();
-        $this->assertSame(['title' => 'Regenjacke gefüttert', 'brand' => 'Jako-o', 'size' => '110', 'condition' => 'Sehr gut'], $fake->calls[2]['context']);
+        $this->assertSame(['title' => 'Regenjacke gefüttert', 'brand' => 'Jako-o', 'size' => '110', 'condition' => 'Sehr gut', 'references' => ['Schlafsack · fillikid · Gr. 90: verkauft für 4,00 €']], $fake->calls[2]['context']);
         $this->assertSame('104', $article->fresh()->size, 'Formularwerte werden dabei nicht gespeichert.');
         $this->postJson(route('articles.ai-price', $article), ['condition' => 'kaputt'])->assertJsonValidationErrors('condition');
 

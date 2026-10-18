@@ -16,6 +16,8 @@ class ArticleAssistController extends Controller
 {
     private const MAX_IMAGES = 5;
 
+    private const MAX_REFERENCES = 60;
+
     public function __invoke(Request $request, ArticleAssistant $assistant): JsonResponse
     {
         $data = $request->validate([
@@ -107,6 +109,7 @@ class ArticleAssistController extends Controller
                 'brand' => $data['brand'] ?? $article->brand,
                 'size' => $data['size'] ?? $article->size,
                 'condition' => $request->has('condition') ? ArticleCondition::tryFrom((string) $data['condition'])?->label() : $article->condition?->label(),
+                'references' => $this->priceReferences($article),
             ]);
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 502);
@@ -117,6 +120,26 @@ class ArticleAssistController extends Controller
         }
 
         return response()->json($suggestion);
+    }
+
+    /**
+     * Eigene Vinted-Preise anderer Artikel als Maßstab, erzielte vor angebotenen.
+     *
+     * @return list<string>
+     */
+    private function priceReferences(Article $article): array
+    {
+        return Article::query()
+            ->whereKeyNot($article->getKey())
+            ->where(fn ($query) => $query->where('sale_price', '>', 0)->orWhere('price', '>', 0))
+            ->orderByRaw('CASE WHEN sale_price > 0 THEN 0 ELSE 1 END')
+            ->latest('id')
+            ->limit(self::MAX_REFERENCES)
+            ->get()
+            ->map(fn (Article $other) => implode(' · ', array_filter([
+                $other->title, $other->brand, $other->size ? 'Gr. '.$other->size : null, $other->condition?->label(),
+            ])).': '.((float) $other->sale_price > 0 ? 'verkauft für '.$other->formattedSalePrice() : 'angeboten für '.$other->formattedPrice()))
+            ->all();
     }
 
     /**

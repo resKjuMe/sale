@@ -61,7 +61,7 @@ class ArticleAssistant
      * Angebotspreis in Euro für Vinted, auf 50 Cent gerundet, mit kurzer Begründung; price null, wenn die KI ihn nicht einschätzen kann.
      *
      * @param  list<string>  $images  Rohdaten (JPEG/PNG/WebP)
-     * @param  array{title?: ?string, brand?: ?string, size?: ?string, condition?: ?string}  $context
+     * @param  array{title?: ?string, brand?: ?string, size?: ?string, condition?: ?string, references?: list<string>}  $context
      * @return array{price: ?float, reason: ?string}
      */
     public function suggestPrice(array $images, array $context = []): array
@@ -168,15 +168,20 @@ class ArticleAssistant
             isset($context['size']) ? 'Gr. '.$context['size'] : null,
             isset($context['condition']) ? 'Zustand: '.$context['condition'] : null,
         ]));
+        $references = ($context['references'] ?? []) === []
+            ? ''
+            : "\nPreise des Verkäufers für andere Artikel auf Vinted – daran kalibrieren, sie spiegeln seinen Markt:\n- ".implode("\n- ", $context['references']);
 
         return <<<TXT
             Schlage einen Angebotspreis in Euro vor, zu dem dieser Artikel gebraucht auf Vinted (Deutschland) zügig verkauft wird.
-            - Maßstab sind die Preise, zu denen vergleichbare gebrauchte Kinderkleidung auf Vinted tatsächlich weggeht, nicht der Neupreis. Gebrauchte Basics von Massenmarken bringen dort oft nur wenige Euro.
+            - Maßstab sind die Preise, zu denen vergleichbare gebrauchte Kinderkleidung auf Vinted tatsächlich weggeht, nicht der Neupreis. Die liegen meist deutlich niedriger, als man erwartet.
+            - Übliche Spannen bei Massen- und Mittelklassemarken (H&M, C&A, Topomini, fillikid, Alana, Jako-o …): Bodys, Shirts, Leggings 1–3 €; Pullover, Hosen, Kleider 2–5 €; Schlafsäcke, Jacken, Schneeanzüge 3–8 €. Nur gefragte Marken (z. B. Mini Rodini, Petit Bateau, Polarn O. Pyret, Patagonia) oder Neuware mit Etikett liegen darüber.
+            - Im Zweifel den niedrigeren Wert: zügig verkaufen ist wichtiger als den Höchstpreis zu erzielen.
             - Berücksichtige Art des Kleidungsstücks, Marke, Größe, Zustand und auf den Fotos sichtbare Mängel (Flecken, Pilling, verwaschene Farben).
             - Käufer zahlen auf Vinted Versand und Käuferschutz zusätzlich; der Preis muss das aushalten.
             - Ein einzelner Wert, auf 0,50 € gerundet. Kannst du den Artikel nicht einschätzen, setze price und reason auf null.
             - reason: knappe deutsche Begründung, höchstens ein Satz und 120 Zeichen, z. B. „Massenmarke, leichte Gebrauchsspuren, Basics gehen für wenig weg".
-            Bekannt zum Artikel: {$known}
+            Bekannt zum Artikel: {$known}{$references}
             TXT;
     }
 
